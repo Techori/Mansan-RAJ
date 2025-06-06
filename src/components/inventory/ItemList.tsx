@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo, useRef, Suspense } from 'react';
 import { useInventory } from '../../contexts/InventoryContext';
 import { Item } from '../../types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -136,27 +136,28 @@ TableRowMemo.displayName = 'TableRowMemo';
 const TableHeaderMemo = memo(() => (
   <TableHeader className="sticky top-0 bg-white z-10">
     <TableRow>
-      <TableHead className="py-2">Name</TableHead>
-      <TableHead className="py-2">Company</TableHead>
-      <TableHead className="py-2">Unit Price</TableHead>
-      <TableHead className="py-2">MRP</TableHead>
-      <TableHead className="py-2">GST %</TableHead>
-      <TableHead className="py-2">HSN Code</TableHead>
-      <TableHead className="py-2">Godown</TableHead>
-      <TableHead className="py-2">Stock</TableHead>
+      <TableHead>Name</TableHead>
+      <TableHead>Company</TableHead>
+      <TableHead>Unit Price</TableHead>
+      <TableHead>MRP</TableHead>
+      <TableHead>GST %</TableHead>
+      <TableHead>HSN Code</TableHead>
+      <TableHead>Godown</TableHead>
+      <TableHead>Stock</TableHead>
     </TableRow>
   </TableHeader>
 ));
 
 TableHeaderMemo.displayName = 'TableHeaderMemo';
 
-const ROW_HEIGHT = 45; // Approximate height of each row
+const ROW_HEIGHT = 20; // Approximate height of each row
 
 const ItemList: React.FC = () => {
   const { items, getAllItems, isLoading, error } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   const [selectedGodowns, setSelectedGodowns] = useState<Record<string, string>>({});
+  const [isFiltering, setIsFiltering] = useState(false);
 
   const parentRef = useRef<HTMLDivElement>(null);
   const prevSearchRef = useRef(searchTerm);
@@ -166,8 +167,10 @@ const ItemList: React.FC = () => {
     if (prevSearchRef.current === searchTerm) return;
     prevSearchRef.current = searchTerm;
     
+    setIsFiltering(true);
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
+      setIsFiltering(false);
     }, 300);
 
     return () => clearTimeout(timer);
@@ -292,58 +295,65 @@ const ItemList: React.FC = () => {
     <div className="h-full flex flex-col">
       <div className="flex items-center space-x-2 mb-4 flex-shrink-0">
         <Search className="h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search items..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-            </div>
+        <Input
+          placeholder="Search items..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
 
       <Card className="flex-1 min-h-0">
-        <CardContent className="p-0 h-full">
+        <CardContent className="p-0 h-full relative">
+          {isFiltering && (
+            <div className="absolute inset-0 bg-white/50 z-50 flex items-center justify-center">
+              <Loader />
+            </div>
+          )}
           <div ref={parentRef} className="h-full overflow-auto">
-          <Table>
+            <Table>
               <TableHeaderMemo />
               <TableBody>
                 {filteredItems.length === 0 ? (
-              <TableRow>
+                  <TableRow>
                     <TableCell colSpan={8} className="text-center">
                       {groupedItems.length === 0 ? 'No items in inventory' : 'No items found'}
                     </TableCell>
                   </TableRow>
-              ) : (
+                ) : (
                   <>
                     {paddingTop > 0 && (
                       <tr>
                         <td style={{ height: `${paddingTop}px` }} />
                       </tr>
                     )}
-                    {virtualRows.map((virtualRow) => (
-                      <TableRowMemo
-                        key={filteredItems[virtualRow.index].name}
-                        item={filteredItems[virtualRow.index]}
-                        selectedGodown={selectedGodowns[filteredItems[virtualRow.index].name] || ''}
-                        onGodownChange={handleGodownChange}
-                        getCurrentQuantity={getCurrentQuantity}
-                        style={{
-                          height: `${virtualRow.size}px`,
-                          transform: `translateY(${virtualRow.start}px)`,
-                        }}
-                      />
-                    ))}
+                    <Suspense fallback={<Loader />}>
+                      {virtualRows.map((virtualRow) => (
+                        <TableRowMemo
+                          key={filteredItems[virtualRow.index].name}
+                          item={filteredItems[virtualRow.index]}
+                          selectedGodown={selectedGodowns[filteredItems[virtualRow.index].name] || ''}
+                          onGodownChange={handleGodownChange}
+                          getCurrentQuantity={getCurrentQuantity}
+                          style={{
+                            height: `${virtualRow.size}px`,
+                            transform: `translateY(${virtualRow.start}px)`,
+                          }}
+                        />
+                      ))}
+                    </Suspense>
                     {paddingBottom > 0 && (
                       <tr>
                         <td style={{ height: `${paddingBottom}px` }} />
                       </tr>
                     )}
                   </>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
-        </Card>
+      </Card>
     </div>
   );
 };
