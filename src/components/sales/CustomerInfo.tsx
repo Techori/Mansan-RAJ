@@ -6,8 +6,14 @@ import { Label } from '@/components/ui/label';
 import { useCustomers } from '../../contexts/CustomersContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckIcon, ChevronDown } from 'lucide-react';
+import { CheckIcon, ChevronDown, Plus, Phone } from 'lucide-react';
 import { cn } from "@/lib/utils";
+
+// Add interface for phone mapping
+interface PhoneMapping {
+  phone: string;
+  billerName: string;
+}
 
 interface CustomerInfoProps {
   customerName: string;
@@ -46,6 +52,51 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
   const [inputValue, setInputValue] = useState(customerName);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const { groupedCustomers } = useCustomers();
+  
+  // Add state for phone mappings (in real app, this might come from a context or localStorage)
+  const [phoneMappings, setPhoneMappings] = useState<PhoneMapping[]>(() => {
+    const savedMappings = localStorage.getItem('phoneMappings');
+    return savedMappings ? JSON.parse(savedMappings) : [];
+  });
+
+  // Save mappings to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('phoneMappings', JSON.stringify(phoneMappings));
+  }, [phoneMappings]);
+
+  // Function to handle adding new phone mapping
+  const handleAddPhoneMapping = useCallback(() => {
+    if (!customerMobile || !extraValue) return;
+    
+    setPhoneMappings(prev => {
+      const exists = prev.some(mapping => mapping.phone === customerMobile);
+      if (exists) {
+        return prev.map(mapping => 
+          mapping.phone === customerMobile 
+            ? { ...mapping, billerName: extraValue }
+            : mapping
+        );
+      }
+      return [...prev, { phone: customerMobile, billerName: extraValue }];
+    });
+  }, [customerMobile, extraValue]);
+
+  // Function to handle phone number change with mapping lookup
+  const handlePhoneChange = useCallback((value: string) => {
+    onCustomerMobileChange(value);
+    
+    if (!value.trim()) {
+      // Clear biller name when phone number is cleared
+      onExtraValueChange('');
+      return;
+    }
+    
+    // Look for matching phone number in mappings
+    const mapping = phoneMappings.find(m => m.phone === value);
+    if (mapping) {
+      onExtraValueChange(mapping.billerName);
+    }
+  }, [onCustomerMobileChange, phoneMappings, onExtraValueChange]);
 
   // Combine all ledgers from all groups - memoized and only updates when groupedCustomers changes
   const allLedgers = useMemo(() => {
@@ -191,24 +242,46 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
 
         {/* Customer Mobile */}
         <div className="space-y-2">
-          <Label htmlFor="customerMobile">Customer Mob.</Label>
+          <Label htmlFor="customerMobile" className="flex items-center gap-2">
+            Customer Mob. <Phone className="h-4 w-4 text-gray-400" />
+          </Label>
           <Input
             id="customerMobile"
             value={customerMobile}
-            onChange={e => onCustomerMobileChange(e.target.value)}
+            onChange={e => handlePhoneChange(e.target.value)}
             placeholder="Enter mobile number"
           />
         </div>
 
-        {/* Empty Input Box */}
+        {/* Biller Name Field with Mapping Status */}
         <div className="space-y-2">
-          <Label htmlFor="extraValue">&nbsp;</Label>
-          <Input
-            id="extraValue"
-            value={extraValue}
-            onChange={e => onExtraValueChange(e.target.value)}
-            placeholder=""
-          />
+          <Label htmlFor="extraValue">Biller Name</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="extraValue"
+              value={extraValue}
+              onChange={e => onExtraValueChange(e.target.value)}
+              placeholder="Enter Biller Name"
+              className="w-[300px]"
+            />
+            <div className="flex items-center gap-1 min-w-[100px]">
+              {customerMobile && extraValue && !phoneMappings.some(m => m.phone === customerMobile) && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 rounded-full hover:bg-gray-100 flex-shrink-0"
+                  onClick={handleAddPhoneMapping}
+                  title="Map phone to biller"
+                >
+                  <Plus className="h-5 w-5 text-blue-500" />
+                </Button>
+              )}
+              {customerMobile && phoneMappings.some(m => m.phone === customerMobile) && (
+                <span className="text-xs text-green-600 whitespace-nowrap">✓ Mapped</span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </Card>
