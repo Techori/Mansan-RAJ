@@ -32,7 +32,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [currentSaleItems, setCurrentSaleItems] = useState<SaleItem[]>([]);
   
   const { currentCompany, companies } = useCompany();
-  const { items } = useInventory();
+  // const { items } = useInventory();
 
   // Filter sales based on current company
   useEffect(() => {
@@ -57,8 +57,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const formattedItem = formatInventoryItemForBilling(saleItem);
       
       // Validate company-specific rules
-      if (formattedItem.companyName === 'Mansan Laal and Sons' && !formattedItem.gstPercentage) {
-        toast.error('Mansan Laal and Sons requires GST items only');
+      if (formattedItem.companyName === 'Mansan Raj Traders' && !formattedItem.gstPercentage) {
+        toast.error('Mansan Raj Traders requires GST items only');
         return;
       }
       
@@ -68,8 +68,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
       
       // HSN code validation for GST items of Mansan Laal
-      if (formattedItem.companyName === 'Mansan Laal and Sons' && !formattedItem.hsnCode) {
-        toast.error('HSN Code is required for Mansan Laal and Sons items');
+      if (formattedItem.companyName === 'Mansan Raj Traders' && !formattedItem.hsnCode) {
+        toast.error('HSN Code is required for Mansan Raj Traders items');
         return;
       }
       
@@ -86,6 +86,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       // --- CORRECTION: Always add a new row for each item, even if itemId and companyId are the same ---
       setCurrentSaleItems(prev => [...prev, finalItem]);
       // --- END CORRECTION ---
+      console.log(currentSaleItems)
     } catch (error) {
       console.error("Error adding sale item:", error);
       toast.error("Failed to add item");
@@ -95,8 +96,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const updateSaleItem = (index: number, saleItem: SaleItem) => {
     try {
       // Validate company-specific rules
-      if (saleItem.companyName === 'Mansan Laal and Sons' && !saleItem.gstPercentage) {
-        toast.error('Mansan Laal and Sons requires GST items only');
+      if (saleItem.companyName === 'Mansan Raj Traders' && !saleItem.gstPercentage) {
+        toast.error('Mansan Raj Traders requires GST items only');
         return;
       }
       
@@ -106,8 +107,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
       
       // HSN code validation for GST items of Mansan Laal
-      if (saleItem.companyName === 'Mansan Laal and Sons' && !saleItem.hsnCode) {
-        toast.error('HSN Code is required for Mansan Laal and Sons items');
+      if (saleItem.companyName === 'Mansan Raj Traders' && !saleItem.hsnCode) {
+        toast.error('HSN Code is required for Mansan Raj Traders items');
         return;
       }
       
@@ -180,13 +181,13 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         if (!company) continue;
         
         // Special validation for Mansan Laal
-        if (company.name === 'Mansan Laal and Sons') {
+        if (company.name === 'Mansan Raj Traders') {
           // All items must be GST items
           const nonGstItems = companyItems.filter(item => item.gstPercentage === undefined || item.gstPercentage === 0);
           if (nonGstItems.length > 0) {
             return {
               valid: false,
-              errorMessage: 'Mansan Laal and Sons requires GST items only'
+              errorMessage: 'Mansan Raj Traders requires GST items only'
             };
           }
           
@@ -195,7 +196,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           if (missingHsnItems.length > 0) {
             return {
               valid: false,
-              errorMessage: 'HSN Code is required for all Mansan Laal and Sons items'
+              errorMessage: 'HSN Code is required for all Mansan Raj Traders items'
             };
           }
         }

@@ -34,7 +34,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
       setError(null);
 
       const result = await axios.post('/api/tally/stocks/fetch-items');
-      console.log("result",result.data)
+      // console.log("result",result.data)
       
       if (!result.data) {
         throw new Error('No data received from server');
@@ -62,6 +62,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
       
       setGodowns(result.data.godowns || []);
       setItems(mappedItems);
+      // console.log(mappedItems)
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch inventory items';
       console.error('Error fetching items:', errorMessage);

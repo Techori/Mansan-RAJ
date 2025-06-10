@@ -62,7 +62,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   React.useEffect(() => {
     if (items && items.length > 0) {
       const item = items.find((item) => item.name === selectedItemName);
-      console.log("item",item)
+      // console.log("item",item)
       if (item) {
         setSelectedItem(item);
         // Set default godown if available
@@ -172,7 +172,8 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       totalAmount: totalPrice,
       hsnCode: hsnCode || undefined,
       packagingDetails: packagingDetails || undefined,
-      godown: selectedItem.godown ? selectedItem.godown.filter(g => g.name === selectedGodown) : []
+      godown: selectedItem.godown ? selectedItem.godown.filter(g => g.name === selectedGodown) : [],
+      priceLevelList: selectedItem.priceLevelList || []
     };
     try {
       onAddItem(saleItem);
@@ -498,12 +499,12 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
         </div>
         
         {/* Warnings */}
-        {company && (company === 'Mansan Laal and Sons' || company === 'Estimate') && (
+        {company && (company === 'Mansan Raj Traders' || company === 'Estimate') && (
           <div className="flex items-center p-1 mb-1 text-amber-800 bg-amber-50 rounded border border-amber-200">
             <AlertCircle size={12} className="mr-1" />
             <p className="text-xs">
-              {company === 'Mansan Laal and Sons' 
-                ? 'Mansan Laal and Sons requires GST items with HSN codes only.'
+              {company === 'Mansan Raj Traders' 
+                ? 'Mansan Raj Traders requires GST items with HSN codes only.'
                 : 'Estimate company only accepts Non-GST items.'}
             </p>
           </div>

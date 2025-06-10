@@ -102,8 +102,8 @@ const EnhancedSaleForm: React.FC = () => {
   // console.log(itemsToShow);
 
   // Restore hsnCode and packagingDetails state
-  const [gstRate,setGstRate] = useState<number>(0)
-  const [hsnCode,setHsnCode] = useState<string>('')
+  const [gstRate, setGstRate] = useState<number>(0)
+  const [hsnCode, setHsnCode] = useState<string>('')
   const [packagingDetails, setPackagingDetails] = useState<string>('');
 
   // Add state for customer suggestions popover
@@ -113,10 +113,10 @@ const EnhancedSaleForm: React.FC = () => {
   const filteredCustomerSuggestions = useMemo(() => {
     if (!customerName.trim()) return [];
     const lower = customerName.toLowerCase();
-    
+
     // Flatten all ledgers from all groups
-    return groupedCustomers.flatMap(group => 
-      group.ledgers.filter(ledger => 
+    return groupedCustomers.flatMap(group =>
+      group.ledgers.filter(ledger =>
         ledger.toLowerCase().includes(lower)
       ).map(ledger => ({
         name: ledger,
@@ -182,7 +182,7 @@ const EnhancedSaleForm: React.FC = () => {
     // const hasCompanies = companies && companies.length > 0;
     const hasItems = items && items.length > 0;
     // const hasGodowns = filteredGodowns && filteredGodowns.length > 0;
-    
+
     setIsLoading(!(hasItems));
   }, [companies, items]);
 
@@ -199,7 +199,7 @@ const EnhancedSaleForm: React.FC = () => {
           if (item.mrp) {
             setMrp(item.mrp);
             const calculatedExclusiveCost = calculateExclusiveCost(item.mrp, item.gstPercentage);
-  
+
             setExclusiveCost(calculatedExclusiveCost);
             const calculatedGstAmount = item.mrp - calculatedExclusiveCost;
             setGstAmount(calculatedGstAmount * quantity);
@@ -239,7 +239,7 @@ const EnhancedSaleForm: React.FC = () => {
     if (gstRate > 0) {
       const newExclusiveCost = calculateExclusiveCost(value, gstRate);
       setExclusiveCost(newExclusiveCost);
-      
+
       const newGstAmount = value - newExclusiveCost;
       setGstAmount(newGstAmount * quantity);
     } else {
@@ -247,7 +247,7 @@ const EnhancedSaleForm: React.FC = () => {
       setGstAmount(0);
     }
   };
-  
+
   // Handle adding item to bill
   const handleAddItem = () => {
     if (!selectedItem) {
@@ -277,10 +277,10 @@ const EnhancedSaleForm: React.FC = () => {
     }
     const totalPrice = discountedBaseAmount + itemGstAmount;
     const itemCompany = companies?.find(c => c.id === selectedItem.companyId);
-    
+
     // Get company name from the company object or use a default
     const companyName = itemCompany?.name || 'Unknown Company';
-    
+
     const saleItem: SaleItem = {
       itemId: selectedItem.id,
       companyId: selectedItem.companyId,
@@ -298,7 +298,8 @@ const EnhancedSaleForm: React.FC = () => {
       totalAmount: totalPrice,
       hsnCode: hsnCode || undefined,
       packagingDetails: packagingDetails || undefined,
-      godown: selectedItem.godown
+      godown: selectedItem.godown,
+      priceLevelList: selectedItem.priceList || []
     };
     try {
       addSaleItem(saleItem);
@@ -313,18 +314,18 @@ const EnhancedSaleForm: React.FC = () => {
       console.error('Error adding item to sale:', error);
     }
   };
-  
+
   // Open discount dialog for an item
   const openDiscountDialog = (index: number) => {
     if (!currentSaleItems || index < 0 || index >= currentSaleItems.length) {
       toast.error('Invalid item selected');
       return;
     }
-    
+
     const item = currentSaleItems[index];
-    
+
     setDiscountItemIndex(index);
-    
+
     if (item.discountValue) {
       setDialogDiscount(item.discountPercentage ? item.discountPercentage : item.discountValue);
       setDialogDiscountType(item.discountPercentage ? 'percentage' : 'amount');
@@ -332,23 +333,23 @@ const EnhancedSaleForm: React.FC = () => {
       setDialogDiscount(0);
       setDialogDiscountType('amount');
     }
-    
+
     setIsDiscountDialogOpen(true);
   };
-  
+
   // Apply discount to an item
   const applyItemDiscount = () => {
     if (discountItemIndex < 0 || !currentSaleItems || discountItemIndex >= currentSaleItems.length) return;
-    
+
     const item = currentSaleItems[discountItemIndex];
     const updatedItem = { ...item };
-    
+
     // Calculate discount
     let discountValue = 0;
     let discountPercentage = 0;
-    
+
     const baseAmount = item.unitPrice * item.quantity;
-    
+
     if (dialogDiscount > 0) {
       if (dialogDiscountType === 'amount') {
         discountValue = dialogDiscount;
@@ -358,22 +359,22 @@ const EnhancedSaleForm: React.FC = () => {
         discountValue = (baseAmount * dialogDiscount) / 100;
       }
     }
-    
+
     // Calculate GST on discounted amount
     const discountedBaseAmount = baseAmount - discountValue;
     let itemGstAmount = 0;
-    
+
     if (item.gstPercentage) {
       itemGstAmount = (discountedBaseAmount * item.gstPercentage) / 100;
     }
-    
+
     // Update item with new values
     updatedItem.discountValue = discountValue > 0 ? discountValue : undefined;
     updatedItem.discountPercentage = discountPercentage > 0 ? discountPercentage : undefined;
     updatedItem.gstAmount = itemGstAmount;
     updatedItem.totalPrice = discountedBaseAmount + itemGstAmount;
     updatedItem.totalAmount = updatedItem.totalPrice;
-    
+
     try {
       // Use the updateSaleItem function from context if available, otherwise fallback
       if (typeof contextUpdateSaleItem === 'function') {
@@ -383,7 +384,7 @@ const EnhancedSaleForm: React.FC = () => {
         removeSaleItem(discountItemIndex);
         addSaleItem(updatedItem);
       }
-      
+
       setIsDiscountDialogOpen(false);
       toast.success('Discount applied successfully');
     } catch (error) {
@@ -401,12 +402,12 @@ const EnhancedSaleForm: React.FC = () => {
       setGrandTotal(0);
       return;
     }
-    
+
     let newSubtotal = 0;
     let newTotalDiscount = 0;
     let newTotalGst = 0;
     let newGrandTotal = 0;
-    
+
     currentSaleItems.forEach(item => {
       const baseAmount = item.unitPrice * item.quantity;
       newSubtotal += baseAmount;
@@ -414,25 +415,25 @@ const EnhancedSaleForm: React.FC = () => {
       newTotalGst += item.gstAmount || 0;
       newGrandTotal += item.totalPrice;
     });
-    
+
     setSubtotal(newSubtotal);
     setTotalDiscount(newTotalDiscount);
     setTotalGst(newTotalGst);
     setGrandTotal(newGrandTotal);
   }, [currentSaleItems]);
-  
+
   // Handle create sale
   const handleCreateSale = () => {
     if (!currentSaleItems || currentSaleItems.length === 0) {
       toast.error('No items added to sale');
       return;
     }
-    
+
     if (!customerName.trim()) {
       toast.error('Customer name is required');
       return;
     }
-    
+
     try {
       // Validate company-specific rules
       const validation = validateCompanyItems(currentSaleItems);
@@ -440,12 +441,12 @@ const EnhancedSaleForm: React.FC = () => {
         toast.error(validation.errorMessage || 'Invalid items');
         return;
       }
-      
+
       // Group items by company name to create separate bills if needed
       const itemsByCompany: Record<string, SaleItem[]> = {};
-      
+
       currentSaleItems.forEach(item => {
-        console.log(item,"in EnhancedSaleForm");
+        // console.log(item,"in EnhancedSaleForm");
         const companyName = item.companyName;
         if (!companyName) {
           console.warn(`Company name not found for item ${item.name}`);
@@ -455,22 +456,22 @@ const EnhancedSaleForm: React.FC = () => {
         if (!itemsByCompany[companyName]) {
           itemsByCompany[companyName] = [];
         }
-        
+
         itemsByCompany[companyName].push(item);
       });
-      
+
       // Create bills for each company
       const createdSales = [];
-      
+
       for (const [companyName, items] of Object.entries(itemsByCompany)) {
         const company = companies?.find(c => c.name === companyName);
-        
+
         const hasGst = items.some(item => item.gstPercentage && item.gstPercentage > 0);
-        
+
         // Explicitly cast billType to the correct type
         const billType = hasGst ? 'GST' as const : 'NON-GST' as const;
         const billNumber = `${companyName.substring(0, 3).toUpperCase()}-${Date.now()}`; // Generate a bill number with company prefix
-        
+
         const billData = {
           companyId: company?.id || companyName, // Fallback to company name if ID not found
           companyName: companyName,
@@ -483,17 +484,17 @@ const EnhancedSaleForm: React.FC = () => {
           createdBy: currentUser?.name || 'Unknown',
           taxInvoiceNo,
           estimateNo,
-          partyAccount,
+          priceLevel,
           customerMobile,
           extraValue,
         };
-        
+
         const sale = createSale(billData);
         if (sale) {
           createdSales.push(sale);
         }
       }
-      
+
       // Clear the form if all sales were created successfully
       if (createdSales.length > 0) {
         setCreatedSale(createdSales);
@@ -516,14 +517,14 @@ const EnhancedSaleForm: React.FC = () => {
       toast.error('Failed to create sale');
     }
   };
-  
+
   // Handle preview consolidated bill
   const handlePreviewConsolidatedBill = () => {
     if (!currentSaleItems || currentSaleItems.length === 0) {
       toast.error('No items added to sale');
       return;
     }
-    
+
     setConsolidatedPreviewOpen(true);
   };
 
@@ -571,12 +572,12 @@ const EnhancedSaleForm: React.FC = () => {
       contextUpdateSaleItem(index, saleItem);
       return;
     }
-    
+
     // Fallback implementation
     try {
       const newItems = [...currentSaleItems];
       newItems[index] = saleItem;
-      
+
       // Remove and add to simulate update
       removeSaleItem(index);
       addSaleItem(saleItem);
@@ -606,24 +607,24 @@ const EnhancedSaleForm: React.FC = () => {
   // Add state for tax invoice and estimate number
   const [taxInvoiceNo, setTaxInvoiceNo] = useState<string>('');
   const [estimateNo, setEstimateNo] = useState<string>('');
-  
+
   // Add state for party account, customer mobile and extra value
-  const [partyAccount, setPartyAccount] = useState<string>('');
+  const [priceLevel, setPriceLevel] = useState<string>('');
   const [customerMobile, setCustomerMobile] = useState<string>('');
   const [extraValue, setExtraValue] = useState<string>('');
-  
+
   // Mock party accounts data - this would come from backend in a real application
-  const mockPartyAccounts = useMemo(() => [
-    { id: 'cash', name: 'Cash' },
-    { id: 'credit', name: 'Credit' },
-    { id: 'bank', name: 'Bank' },
+  const mockPriceLevels = useMemo(() => [
+    { id: 'Retail', name: 'Retail' },
+    { id: 'Wholesale', name: 'Wholesale' },
+    { id: 'Semi-Wholesale', name: 'Semi-Wholesale' },
   ], []);
 
   // Loading state
   if (isLoading) {
     return (
       <Loader />
-   
+
     )
 
   }
@@ -638,29 +639,29 @@ const EnhancedSaleForm: React.FC = () => {
         onTaxInvoiceNoChange={setTaxInvoiceNo}
         estimateNo={estimateNo}
         onEstimateNoChange={setEstimateNo}
-        partyAccount={partyAccount}
-        onPartyAccountChange={setPartyAccount}
+        priceLevel={priceLevel}
+        onPriceLevelChange={setPriceLevel}
         customerMobile={customerMobile}
         onCustomerMobileChange={setCustomerMobile}
         extraValue={extraValue}
         onExtraValueChange={setExtraValue}
-        partyAccounts={mockPartyAccounts}
+        priceLevels={mockPriceLevels}
       />
-      
+
       <ItemEntryForm
         onAddItem={addSaleItem}
         companies={companies || []}
         items={items || []}
       />
-      
+
       <SaleItemsTable
         items={currentSaleItems}
         onRemoveItem={removeSaleItem}
         onOpenDiscountDialog={openDiscountDialog}
       />
-      
+
       <CompanySummary summaries={companySummaries} />
-      
+
       <SaleSummary
         subtotal={subtotal}
         totalDiscount={totalDiscount}
@@ -683,10 +684,10 @@ const EnhancedSaleForm: React.FC = () => {
       />
 
       {isPrintModalOpen && createdSale && (
-        <PrintBillModal 
-          isOpen={isPrintModalOpen} 
-          onClose={() => setIsPrintModalOpen(false)} 
-          sale={createdSale} 
+        <PrintBillModal
+          isOpen={isPrintModalOpen}
+          onClose={() => setIsPrintModalOpen(false)}
+          sale={createdSale}
           printType={printType}
         />
       )}

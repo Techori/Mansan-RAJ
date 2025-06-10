@@ -23,13 +23,13 @@ interface CustomerInfoProps {
   onTaxInvoiceNoChange?: (value: string) => void;
   estimateNo?: string;
   onEstimateNoChange?: (value: string) => void;
-  partyAccount?: string;
-  onPartyAccountChange?: (value: string) => void;
+  priceLevel?: string;
+  onPriceLevelChange?: (value: string) => void;
   customerMobile?: string;
   onCustomerMobileChange?: (value: string) => void;
   extraValue?: string;
   onExtraValueChange?: (value: string) => void;
-  partyAccounts?: { id: string; name: string }[];
+  priceLevels?: { id: string; name: string }[];
 }
 
 const CustomerInfo: React.FC<CustomerInfoProps> = ({
@@ -40,19 +40,19 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
   onTaxInvoiceNoChange = () => {},
   estimateNo = '',
   onEstimateNoChange = () => {},
-  partyAccount = '',
-  onPartyAccountChange = () => {},
+  priceLevel = '',
+  onPriceLevelChange = () => {},
   customerMobile = '',
   onCustomerMobileChange = () => {},
   extraValue = '',
   onExtraValueChange = () => {},
-  partyAccounts = [],
+  priceLevels = [],
 }) => {
   const [isCustomerPopoverOpen, setIsCustomerPopoverOpen] = useState(false);
   const [inputValue, setInputValue] = useState(customerName);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const { groupedCustomers } = useCustomers();
-  
+
   // Add state for phone mappings (in real app, this might come from a context or localStorage)
   const [phoneMappings, setPhoneMappings] = useState<PhoneMapping[]>(() => {
     const savedMappings = localStorage.getItem('phoneMappings');
@@ -67,12 +67,12 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
   // Function to handle adding new phone mapping
   const handleAddPhoneMapping = useCallback(() => {
     if (!customerMobile || !extraValue) return;
-    
+
     setPhoneMappings(prev => {
       const exists = prev.some(mapping => mapping.phone === customerMobile);
       if (exists) {
-        return prev.map(mapping => 
-          mapping.phone === customerMobile 
+        return prev.map(mapping =>
+          mapping.phone === customerMobile
             ? { ...mapping, billerName: extraValue }
             : mapping
         );
@@ -84,13 +84,13 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
   // Function to handle phone number change with mapping lookup
   const handlePhoneChange = useCallback((value: string) => {
     onCustomerMobileChange(value);
-    
+
     if (!value.trim()) {
       // Clear biller name when phone number is cleared
       onExtraValueChange('');
       return;
     }
-    
+
     // Look for matching phone number in mappings
     const mapping = phoneMappings.find(m => m.phone === value);
     if (mapping) {
@@ -100,7 +100,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
 
   // Combine all ledgers from all groups - memoized and only updates when groupedCustomers changes
   const allLedgers = useMemo(() => {
-    return groupedCustomers.flatMap(group => 
+    return groupedCustomers.flatMap(group =>
       group.ledgers.map(ledger => ({
         name: ledger,
         group: group.group
@@ -120,7 +120,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
   // Filter ledgers based on debounced search - memoized and only updates when search term changes
   const filteredLedgers = useMemo(() => {
     if (!debouncedSearchTerm) return [];
-    return allLedgers.filter(ledger => 
+    return allLedgers.filter(ledger =>
       ledger.name.toLowerCase().includes(debouncedSearchTerm) ||
       ledger.group.toLowerCase().includes(debouncedSearchTerm)
     ).slice(0, 100); // Limit to first 100 results for performance
@@ -191,7 +191,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
               <ChevronDown className="h-4 w-4 opacity-50" />
             </Button>
             {isCustomerPopoverOpen && filteredLedgers.length > 0 && (
-              <div 
+              <div
                 className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200"
               >
                 <div className="max-h-[300px] overflow-auto py-1">
@@ -222,18 +222,18 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
             )}
           </div>
         </div>
-        
+
         {/* Party A/c Name Dropdown */}
         <div className="space-y-2">
-          <Label htmlFor="partyAccount">Party A/c Name</Label>
-          <Select value={partyAccount} onValueChange={onPartyAccountChange}>
+          <Label htmlFor="priceLevel">Price Level</Label>
+          <Select value={priceLevel} onValueChange={onPriceLevelChange}>
             <SelectTrigger>
-              <SelectValue placeholder="Select Party A/c" />
+              <SelectValue placeholder="Select Price Level" />
             </SelectTrigger>
             <SelectContent>
-              {partyAccounts.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name}
+              {priceLevels.map((priceL) => (
+                <SelectItem key={priceL.id} value={priceL.id}>
+                  {priceL.name}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -38,5 +38,6 @@ export const formatInventoryItemForBilling = (item: any) => {
     salesUnit: item.salesUnit || 'Piece',
     availableQuantity: totalPieces,
     companyName: item.companyName || (item.company && item.company.name) || '',
+    priceLevelList: item.priceList || [],
   };
 }; 
