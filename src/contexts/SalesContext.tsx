@@ -6,6 +6,9 @@ import { useInventory } from './InventoryContext';
 import { toast } from 'sonner';
 import { formatInventoryItemForBilling } from '../utils/inventoryUtils';
 
+// Storage key for localStorage
+const SALES_STORAGE_KEY = 'app_sales_data';
+
 interface SalesContextType {
   sales: Sale[];
   filteredSales: Sale[];
@@ -25,7 +28,17 @@ interface SalesContextType {
 const SalesContext = createContext<SalesContextType | undefined>(undefined);
 
 export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [sales, setSales] = useState<Sale[]>(mockSales);
+  // Initialize sales from localStorage or fallback to mockSales
+  const [sales, setSales] = useState<Sale[]>(() => {
+    try {
+      const savedSales = localStorage.getItem(SALES_STORAGE_KEY);
+      return savedSales ? JSON.parse(savedSales) : mockSales;
+    } catch (error) {
+      console.error('Error loading sales from localStorage:', error);
+      return mockSales;
+    }
+  });
+
   const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
   const [gstSales, setGstSales] = useState<Sale[]>([]);
   const [nonGstSales, setNonGstSales] = useState<Sale[]>([]);
@@ -33,6 +46,15 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   
   const { currentCompany, companies } = useCompany();
   const { items } = useInventory();
+
+  // Save to localStorage whenever sales change
+  useEffect(() => {
+    try {
+      localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(sales));
+    } catch (error) {
+      console.error('Error saving sales to localStorage:', error);
+    }
+  }, [sales]);
 
   // Filter sales based on current company
   useEffect(() => {

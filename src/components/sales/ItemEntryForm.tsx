@@ -9,7 +9,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CheckIcon, ChevronDown } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Item, SaleItem } from '../../types';
-import { useInventory } from '../../contexts/InventoryContext';
 import { toast } from 'sonner';
 import { calculateExclusiveCost, calculateMRP, calculateGstAmount } from '../../utils/pricingUtils';
 import { useCustomers } from '../../contexts/CustomersContext';
@@ -17,6 +16,8 @@ import { useCustomers } from '../../contexts/CustomersContext';
 
 // Define sales units
 const SALES_UNITS = ['Case', 'Packet', 'Piece'];
+// Define sales types
+const SALES_TYPES = ['Retail', 'Wholesale', 'Semi-Wholesale'];
 
 type ItemEntryFormProps = {
   onAddItem: (item: SaleItem) => void;
@@ -46,6 +47,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   const [discount, setDiscount] = useState<number>(0);
   const [discountType, setDiscountType] = useState<'amount' | 'percentage'>('amount');
   const [packagingDetails, setPackagingDetails] = useState<string>('');
+  const [salesType, setSalesType] = useState<string>('Retail');
 
   // Filter items based on search
   const filteredSearchItems = useMemo(() => {
@@ -157,13 +159,13 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
 
     const saleItem: SaleItem = {
       itemId: '1',
-      companyId: companyId,
       companyName: itemCompany,
       name: selectedItem.name,
       quantity,
       unitPrice: exclusiveCost,
       mrp: mrp,
       salesUnit,
+      salesType,
       gstPercentage: gstRate > 0 ? gstRate : undefined,
       gstAmount: itemGstAmount,
       discountValue: discountValue > 0 ? discountValue : undefined,
@@ -280,6 +282,23 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
             </Popover>
           </div>
 
+          {/* Sales Type Dropdown - Add after Godown selection */}
+          <div className="w-[150px]">
+            <Label htmlFor="salesType" className="text-xs">Sales Type</Label>
+            <Select value={salesType} onValueChange={setSalesType}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {SALES_TYPES.map((type) => (
+                  <SelectItem key={type} value={type} className="text-xs">
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Godown */}
           <div className="w-[180px]">
             <Label htmlFor="godown" className="text-xs">Godown</Label>
@@ -367,7 +386,6 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               id="exclusiveCost"
               type="number"
               min="0"
-              step="0.01"
               value={exclusiveCost}
               onChange={(e) => {
                 const value = parseFloat(e.target.value) || 0;
@@ -479,7 +497,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
           </div>
           
           {/* Add Button */}
-          <div className="w-[120px]">
+          <div className="w-[120px] flex flex-col justify-end h-[52px]">
             <Button 
               type="button" 
               onClick={handleAddItem}

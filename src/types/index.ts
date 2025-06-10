@@ -47,7 +47,6 @@ export interface Item {
 
 export interface SaleItem {
   itemId: string;
-  companyId: string;
   companyName: string;
   name: string;
   quantity: number;
@@ -63,6 +62,7 @@ export interface SaleItem {
   totalAmount: number;
   salesUnit: string;
   godown: Godown[];
+  salesType: string;
 }
 
 // Customer Type
