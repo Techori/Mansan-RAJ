@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Company, Sale, SaleItem } from '../../types';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
@@ -398,19 +397,19 @@ export const CompanyBillTemplate: React.FC<CompanyBillTemplateProps> = ({ compan
               <View key={index} style={styles.tableRow}>
                 <Text style={styles.description}>{item.name}</Text>
                 <Text style={styles.qty}>{item.quantity}</Text>
-                <Text style={styles.mrp}>₹{(item.mrp || item.unitPrice).toFixed(2)}</Text>
+                <Text style={styles.mrp}>₹{Number(item.mrp || item.unitPrice || 0).toFixed(2)}</Text>
                 {hasDiscount && (
                   <Text style={styles.discount}>
-                    {item.discountValue ? `₹${item.discountValue.toFixed(2)}` : '-'}
+                    {item.discountValue ? `₹${Number(item.discountValue).toFixed(2)}` : '-'}
                   </Text>
                 )}
-                <Text style={styles.exclCost}>₹{item.unitPrice.toFixed(2)}</Text>
+                <Text style={styles.exclCost}>₹{Number(item.unitPrice || 0).toFixed(2)}</Text>
                 {hasGst && (
                   <Text style={styles.gst}>
-                    {item.gstPercentage ? `${item.gstPercentage}%` : '-'}
+                    {item.gstPercentage ? `${Number(item.gstPercentage)}%` : '-'}
                   </Text>
                 )}
-                <Text style={styles.total}>₹{item.totalPrice.toFixed(2)}</Text>
+                <Text style={styles.total}>₹{Number(item.totalPrice || 0).toFixed(2)}</Text>
               </View>
             ))}
           </View>
@@ -464,13 +463,13 @@ export const ConsolidatedBillTemplate: React.FC<{ sale: Sale | Sale[] }> = ({ sa
   
   // Group items by company
   const itemsByCompany = allItems.reduce<Record<string, { company: string, items: SaleItem[] }>>((acc, item) => {
-    if (!acc[item.companyId]) {
-      acc[item.companyId] = { 
+    if (!acc[item.companyName]) {
+      acc[item.companyName] = { 
         company: item.companyName,
         items: []
       };
     }
-    acc[item.companyId].items.push(item);
+    acc[item.companyName].items.push(item);
     return acc;
   }, {});
 

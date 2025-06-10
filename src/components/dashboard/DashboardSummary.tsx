@@ -17,7 +17,7 @@ const DashboardSummary: React.FC = () => {
     const filteredSales = selectedCompanyId === 'all' 
       ? sales 
       : sales.filter(sale => sale.companyId === selectedCompanyId);
-
+    
     // Get today's date range
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
@@ -130,7 +130,7 @@ const DashboardSummary: React.FC = () => {
                 <h3 className="text-2xl font-bold">₹{stats.todayRevenue.toFixed(2)}</h3>
                 <p className={`text-xs ${stats.revenueChangePercent >= 0 ? 'text-green-600' : 'text-red-600'} mt-1 flex items-center`}>
                   {stats.revenueChangePercent >= 0 ? (
-                    <ArrowUp className="h-3 w-3 mr-1" />
+                  <ArrowUp className="h-3 w-3 mr-1" />
                   ) : (
                     <ArrowDown className="h-3 w-3 mr-1" />
                   )}

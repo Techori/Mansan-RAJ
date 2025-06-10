@@ -17,14 +17,15 @@ export const formatInventoryItemForBilling = (item: any) => {
     ? (item.unitPrice * item.gstPercentage) / 100
     : 0;
 
+  // Calculate MRP if not provided
+  const mrp = item.mrp.includes('/')
+    ? item.mrp.split('/')[0]
+    : item.mrp;
   // Format the item for billing
+
   return {
-    id: item.id,
-    itemId: item.itemId,
     name: item.name,
-    companyId: item.companyId,
-    company: item.company,
-    godownId: item.godownId,
+    companyName: item.companyName,
     godown: item.godown || 'Not assigned',
     unitPrice: item.unitPrice,
     quantity: item.quantity || 1, // Use provided quantity or default to 1
@@ -32,12 +33,11 @@ export const formatInventoryItemForBilling = (item: any) => {
     gstAmount: gstAmount,
     totalPrice: item.unitPrice + gstAmount,
     totalAmount: item.totalAmount || (item.unitPrice + gstAmount),
-    mrp: item.mrp,
-    hsnCode: item.hsn,
-    type: item.type,
+    mrp: Number(mrp) || 0, // Ensure MRP is a number
+    hsnCode: item.hsnCode,
     salesUnit: item.salesUnit || 'Piece',
     availableQuantity: totalPieces,
-    companyName: item.companyName || (item.company && item.company.name) || '',
-    priceLevelList: item.priceList || [],
+    priceLevelList: item.priceLevelList || [],
+    allUnits : item.allUnits
   };
 }; 

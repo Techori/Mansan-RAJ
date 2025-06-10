@@ -1,10 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Sale, SaleItem } from '../types';
 import { sales as mockSales, generateId, generateBillNumber } from '../data/mockData';
-import { useCompany } from './CompanyContext';
-import { useInventory } from './InventoryContext';
-import { toast } from 'sonner';
 import { formatInventoryItemForBilling } from '../utils/inventoryUtils';
+import { toast } from 'sonner';
 
 // Storage key for localStorage
 const SALES_STORAGE_KEY = 'app_sales_data';
@@ -32,6 +30,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [sales, setSales] = useState<Sale[]>(() => {
     try {
       const savedSales = localStorage.getItem(SALES_STORAGE_KEY);
+      //to get previous sales obtained frlom local storage
+      console.log("savedSales", savedSales)
       return savedSales ? JSON.parse(savedSales) : mockSales;
     } catch (error) {
       console.error('Error loading sales from localStorage:', error);
@@ -43,11 +43,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [gstSales, setGstSales] = useState<Sale[]>([]);
   const [nonGstSales, setNonGstSales] = useState<Sale[]>([]);
   const [currentSaleItems, setCurrentSaleItems] = useState<SaleItem[]>([]);
-  
-  const { currentCompany, companies } = useCompany();
-  // const { items } = useInventory();
 
-  // Save to localStorage whenever sales change
+  // Save sales to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(sales));
@@ -56,46 +53,20 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [sales]);
 
-  // Filter sales based on current company
+  // Filter sales based on type
   useEffect(() => {
     if (!sales) return;
-    
-    if (currentCompany) {
-      const companySales = sales.filter(sale => sale.companyId === currentCompany.id);
-      setFilteredSales(companySales);
-      setGstSales(companySales.filter(sale => sale.billType === 'GST'));
-      setNonGstSales(companySales.filter(sale => sale.billType === 'NON-GST'));
-    } else {
-      // If no company is selected, show all sales
-      setFilteredSales(sales);
-      setGstSales(sales.filter(sale => sale.billType === 'GST'));
-      setNonGstSales(sales.filter(sale => sale.billType === 'NON-GST'));
-    }
-  }, [currentCompany, sales]);
+    setFilteredSales(sales);
+    setGstSales(sales.filter(sale => sale.billType === 'GST'));
+    setNonGstSales(sales.filter(sale => sale.billType === 'NON-GST'));
+  }, [sales]);
 
   const addSaleItem = (saleItem: SaleItem) => {
     try {
-      // Format the item for billing
+      console.log("saleItem", saleItem)
       const formattedItem = formatInventoryItemForBilling(saleItem);
-      
-      // Validate company-specific rules
-      if (formattedItem.companyName === 'Mansan Raj Traders' && !formattedItem.gstPercentage) {
-        toast.error('Mansan Raj Traders requires GST items only');
-        return;
-      }
-      
-      if (formattedItem.companyName === 'Estimate' && formattedItem.gstPercentage) {
-        toast.error('Estimate company only accepts Non-GST items');
-        return;
-      }
-      
-      // HSN code validation for GST items of Mansan Laal
-      if (formattedItem.companyName === 'Mansan Raj Traders' && !formattedItem.hsnCode) {
-        toast.error('HSN Code is required for Mansan Raj Traders items');
-        return;
-      }
-      
-      // Preserve original quantity, discount and other properties
+      console.log("formattedItem", formattedItem)
+
       const finalItem = {
         ...formattedItem,
         quantity: saleItem.quantity,
@@ -104,11 +75,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         totalPrice: saleItem.totalPrice,
         totalAmount: saleItem.totalAmount,
       };
-      
-      // --- CORRECTION: Always add a new row for each item, even if itemId and companyId are the same ---
       setCurrentSaleItems(prev => [...prev, finalItem]);
-      // --- END CORRECTION ---
-      console.log(currentSaleItems)
     } catch (error) {
       console.error("Error adding sale item:", error);
       toast.error("Failed to add item");
@@ -122,35 +89,24 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         toast.error('Mansan Raj Traders requires GST items only');
         return;
       }
-      
+
       if (saleItem.companyName === 'Estimate' && saleItem.gstPercentage) {
         toast.error('Estimate company only accepts Non-GST items');
         return;
       }
-      
+
       // HSN code validation for GST items of Mansan Laal
       if (saleItem.companyName === 'Mansan Raj Traders' && !saleItem.hsnCode) {
         toast.error('HSN Code is required for Mansan Raj Traders items');
         return;
       }
-      
-      // Validate MRP = Excl. Cost + GST for GST items
-      if (saleItem.gstPercentage && saleItem.mrp) {
-        const calculatedMRP = saleItem.unitPrice * (1 + saleItem.gstPercentage / 100);
-        if (Math.abs(calculatedMRP - saleItem.mrp) > 0.01) { // Allow small rounding difference
-          toast.error(`MRP should be equal to Excl. Cost + GST (${calculatedMRP.toFixed(2)})`);
-          return;
-        }
-      }
-      
+
       const updatedItems = [...currentSaleItems];
-      
-      // Validate index is within bounds
       if (index < 0 || index >= updatedItems.length) {
         toast.error('Invalid item index');
         return;
       }
-      
+
       updatedItems[index] = saleItem;
       setCurrentSaleItems(updatedItems);
     } catch (error) {
@@ -162,13 +118,10 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const removeSaleItem = (index: number) => {
     try {
       const updatedItems = [...currentSaleItems];
-      
-      // Validate index is within bounds
       if (index < 0 || index >= updatedItems.length) {
         toast.error('Invalid item index');
         return;
       }
-      
       updatedItems.splice(index, 1);
       setCurrentSaleItems(updatedItems);
     } catch (error) {
@@ -181,40 +134,34 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setCurrentSaleItems([]);
   };
 
-  const validateCompanyItems = (items: SaleItem[]): { valid: boolean; errorMessage?: string } => {
+  const validateCompanyItems = (items: SaleItem[]) => {
     try {
       if (!items || items.length === 0) {
         return { valid: false, errorMessage: 'No items to validate' };
       }
-      
+
       // Group items by company
       const itemsByCompany: Record<string, SaleItem[]> = {};
-      
       items.forEach(item => {
-        if (!itemsByCompany[item.companyId]) {
-          itemsByCompany[item.companyId] = [];
+        if (!item.companyName) {
+          return {
+            valid: false,
+            errorMessage: 'Company name is required for all items'
+          };
         }
-        itemsByCompany[item.companyId].push(item);
+
+        if (!itemsByCompany[item.companyName]) {
+          itemsByCompany[item.companyName] = [];
+        }
+        itemsByCompany[item.companyName].push(item);
       });
-      
+
       // Check each company's items
-      for (const [companyId, companyItems] of Object.entries(itemsByCompany)) {
-        const company = companies?.find(c => c.id === companyId);
-        if (!company) continue;
-        
-        // Special validation for Mansan Laal
-        if (company.name === 'Mansan Raj Traders') {
-          // All items must be GST items
-          const nonGstItems = companyItems.filter(item => item.gstPercentage === undefined || item.gstPercentage === 0);
-          if (nonGstItems.length > 0) {
-            return {
-              valid: false,
-              errorMessage: 'Mansan Raj Traders requires GST items only'
-            };
-          }
-          
+      for (const [companyName, items] of Object.entries(itemsByCompany)) {
+        // Special validation for Mansan Raj Traders
+        if (companyName === 'Mansan Raj Traders') {
           // All items must have HSN code
-          const missingHsnItems = companyItems.filter(item => !item.hsnCode);
+          const missingHsnItems = items.filter(item => !item.hsnCode);
           if (missingHsnItems.length > 0) {
             return {
               valid: false,
@@ -222,11 +169,11 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             };
           }
         }
-        
+
         // Special validation for Estimate
-        if (company.name === 'Estimate') {
+        if (companyName === 'Estimate') {
           // All items must be Non-GST items
-          const gstItems = companyItems.filter(item => item.gstPercentage !== undefined && item.gstPercentage > 0);
+          const gstItems = items.filter(item => item.gstPercentage && item.gstPercentage > 0);
           if (gstItems.length > 0) {
             return {
               valid: false,
@@ -234,33 +181,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             };
           }
         }
-        
-        // General validation - no mixing of GST and Non-GST items
-        const hasGst = companyItems.some(item => item.gstPercentage !== undefined && item.gstPercentage > 0);
-        const allHaveGst = companyItems.every(item => item.gstPercentage !== undefined && item.gstPercentage > 0);
-        const noneHaveGst = companyItems.every(item => item.gstPercentage === undefined || item.gstPercentage === 0);
-        
-        if (hasGst && !allHaveGst && !noneHaveGst) {
-          return {
-            valid: false,
-            errorMessage: `${company.name} cannot have mixed GST/Non-GST items`
-          };
-        }
-        
-        // Validate MRP = Excl. Cost + GST for all GST items
-        for (const item of companyItems) {
-          if (item.gstPercentage !== undefined && item.gstPercentage > 0 && item.mrp) {
-            const calculatedMRP = item.unitPrice * (1 + item.gstPercentage / 100);
-            if (Math.abs(calculatedMRP - item.mrp) > 0.01) { // Allow small rounding difference
-              return {
-                valid: false,
-                errorMessage: `Item ${item.name}: MRP should be equal to Excl. Cost + GST (${calculatedMRP.toFixed(2)})`
-              };
-            }
-          }
-        }
       }
-      
+
       return { valid: true };
     } catch (error) {
       console.error("Error validating items:", error);
@@ -274,20 +196,20 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         toast.error('No items in sale');
         return undefined;
       }
-      
+
       // Validate company-specific rules
       const validation = validateCompanyItems(saleData.items);
       if (!validation.valid) {
         toast.error(validation.errorMessage || 'Invalid items');
         return undefined;
       }
-      
+
       // Calculate total amount if not provided
       const totalAmount = saleData.totalAmount || saleData.items.reduce(
         (total, item) => total + item.totalAmount,
         0
       );
-      
+
       // Generate new sale
       const newSale: Sale = {
         ...saleData,
@@ -296,15 +218,9 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         totalAmount,
         createdAt: new Date().toISOString(),
       };
-      
-      // Note: Stock update is currently disabled
-      // In a future update, implement proper stock management with the updateStock function
-      
-      // Add sale to list
+
       setSales(prev => [...prev, newSale]);
-      
       toast.success('Sale created successfully');
-      
       return newSale;
     } catch (error) {
       console.error("Error creating sale:", error);
@@ -322,29 +238,29 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       return undefined;
     }
   };
-  
+
   const getAllSales = () => {
     return sales;
   };
 
+  const value: SalesContextType = {
+    sales,
+    filteredSales,
+    gstSales,
+    nonGstSales,
+    currentSaleItems,
+    addSaleItem,
+    updateSaleItem,
+    removeSaleItem,
+    clearSaleItems,
+    createSale,
+    getSale,
+    validateCompanyItems,
+    getAllSales,
+  };
+
   return (
-    <SalesContext.Provider
-      value={{
-        sales,
-        filteredSales,
-        gstSales,
-        nonGstSales,
-        currentSaleItems,
-        addSaleItem,
-        updateSaleItem,
-        removeSaleItem,
-        clearSaleItems,
-        createSale,
-        getSale,
-        validateCompanyItems,
-        getAllSales,
-      }}
-    >
+    <SalesContext.Provider value={value}>
       {children}
     </SalesContext.Provider>
   );
@@ -352,10 +268,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
 export const useSales = (): SalesContextType => {
   const context = useContext(SalesContext);
-  
   if (context === undefined) {
     throw new Error('useSales must be used within a SalesProvider');
   }
-  
   return context;
 };

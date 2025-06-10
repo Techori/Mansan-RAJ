@@ -4,6 +4,7 @@ import cors from 'cors'
 import { connectToTally } from './config/tally.config.js';
 import stockTallyRoutes from './routes/stockTallyRoutes.js';
 import customerTallyRoutes from './routes/customerTallyRoutes.js';
+import salesTallyRoutes from './routes/salesTallyRoutes.js';
 
 
 
@@ -34,6 +35,9 @@ if(connectionStatus)
     app.use('/api/tally/stocks', stockTallyRoutes)
     //fetch customers
     app.use('/api/tally/customers', customerTallyRoutes)
+    //create sales
+    app.use('/api/tally/sales', salesTallyRoutes)
+
 
     //NOW CALL TALLY-RELATED APISN HERE...
 }

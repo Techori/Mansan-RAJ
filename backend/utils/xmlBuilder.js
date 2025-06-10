@@ -53,7 +53,8 @@ export function fetchStockItemPriceListXML({companyName}){
               TaxRate,
               Rate,
               ClosingBalance,
-              Mrpdetails
+              Mrpdetails,
+              BaseUnits
             </FETCH>
             <NATIVEMETHOD>FULLPRICELIST.LIST</NATIVEMETHOD>
             <NATIVEMETHOD>GSTDETAILSLIST.LIST</NATIVEMETHOD>

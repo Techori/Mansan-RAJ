@@ -295,13 +295,13 @@ const ItemList: React.FC = () => {
     <div className="h-full flex flex-col">
       <div className="flex items-center space-x-2 mb-4 flex-shrink-0">
         <Search className="h-4 w-4 text-gray-400" />
-        <Input
-          placeholder="Search items..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
+              <Input
+                placeholder="Search items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
 
       <Card className="flex-1 min-h-0">
         <CardContent className="p-0 h-full relative">
@@ -311,16 +311,16 @@ const ItemList: React.FC = () => {
             </div>
           )}
           <div ref={parentRef} className="h-full overflow-auto">
-            <Table>
+          <Table>
               <TableHeaderMemo />
               <TableBody>
                 {filteredItems.length === 0 ? (
-                  <TableRow>
+              <TableRow>
                     <TableCell colSpan={8} className="text-center">
                       {groupedItems.length === 0 ? 'No items in inventory' : 'No items found'}
                     </TableCell>
                   </TableRow>
-                ) : (
+              ) : (
                   <>
                     {paddingTop > 0 && (
                       <tr>
@@ -328,19 +328,19 @@ const ItemList: React.FC = () => {
                       </tr>
                     )}
                     <Suspense fallback={<Loader />}>
-                      {virtualRows.map((virtualRow) => (
-                        <TableRowMemo
-                          key={filteredItems[virtualRow.index].name}
-                          item={filteredItems[virtualRow.index]}
-                          selectedGodown={selectedGodowns[filteredItems[virtualRow.index].name] || ''}
-                          onGodownChange={handleGodownChange}
-                          getCurrentQuantity={getCurrentQuantity}
-                          style={{
-                            height: `${virtualRow.size}px`,
-                            transform: `translateY(${virtualRow.start}px)`,
-                          }}
-                        />
-                      ))}
+                    {virtualRows.map((virtualRow) => (
+                      <TableRowMemo
+                        key={filteredItems[virtualRow.index].name}
+                        item={filteredItems[virtualRow.index]}
+                        selectedGodown={selectedGodowns[filteredItems[virtualRow.index].name] || ''}
+                        onGodownChange={handleGodownChange}
+                        getCurrentQuantity={getCurrentQuantity}
+                        style={{
+                          height: `${virtualRow.size}px`,
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                      />
+                    ))}
                     </Suspense>
                     {paddingBottom > 0 && (
                       <tr>
@@ -348,12 +348,12 @@ const ItemList: React.FC = () => {
                       </tr>
                     )}
                   </>
-                )}
-              </TableBody>
-            </Table>
+              )}
+            </TableBody>
+          </Table>
           </div>
         </CardContent>
-      </Card>
+        </Card>
     </div>
   );
 };

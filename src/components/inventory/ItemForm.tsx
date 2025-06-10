@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Item } from '../../types';
 import { Card } from '@/components/ui/card';
@@ -58,7 +57,6 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
         mrp: item.mrp || 0,
         gstPercentage: item.gstPercentage,
         hsn: item.hsn || '',
-        // godownId: item.godownId,
         stockQuantity: item.stockQuantity,
         salesUnit: item.salesUnit || 'Piece', // Default to 'Piece' if not set
         godown : item.godown,
@@ -83,18 +81,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
         salesUnit: 'Piece',
       });
     }
-  }, [item, companyId, ]);
-
-  // Automatically calculate MRP when unitPrice or gstPercentage changes
-  useEffect(() => {
-    if (formData.unitPrice && formData.gstPercentage) {
-      const calculatedMRP = formData.unitPrice * (1 + formData.gstPercentage / 100);
-      setFormData(prev => ({
-        ...prev,
-        mrp: parseFloat(calculatedMRP.toFixed(2))
-      }));
-    }
-  }, [formData.unitPrice, formData.gstPercentage,]);
+  }, [item, companyId]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -159,44 +146,6 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
     if (!formData.companyId) {
       toast.error('Please select a company');
       return false;
-    }
-    
-    // Get company name for specific validations
-    const company = companies.find(c => c.id === formData.companyId);
-    
-    // Company-specific validations
-    // if (company) {
-    //   if (company.name === 'Mansan Laal and Sons') {
-    //     if (formData.type !== 'GST') {
-    //       toast.error('Mansan Laal and Sons requires GST items only');
-    //       return false;
-    //     }
-        
-    //     if (!formData.hsn) {
-    //       toast.error('HSN Code is required for Mansan Laal and Sons items');
-    //       return false;
-    //     }
-    //   }
-      
-    //   if (company.name === 'Estimate' && formData.type !== 'NON-GST') {
-    //     toast.error('Estimate company only accepts Non-GST items');
-    //     return false;
-    //   }
-    // }
-    
-    // // Validate that GST items have HSN code
-    // if (formData.type === 'GST' && !formData.hsnCode) {
-    //   toast.error('HSN Code is required for GST items');
-    //   return false;
-    // }
-    
-    // Validate MRP calculation for GST items
-    if ( formData.gstPercentage && formData.mrp) {
-      const calculatedMRP = formData.unitPrice * (1 + formData.gstPercentage / 100);
-      if (Math.abs(calculatedMRP - formData.mrp) > 0.01) { // Allow small rounding difference
-        toast.error(`MRP should be equal to Excl. Cost + GST (${calculatedMRP.toFixed(2)})`);
-        return false;
-      }
     }
     
     return true;

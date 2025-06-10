@@ -8,27 +8,27 @@ import { Plus, AlertCircle } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CheckIcon, ChevronDown } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { Item, SaleItem } from '../../types';
+import { Item, SaleItem, Company } from '../../types';
 import { toast } from 'sonner';
 import { calculateExclusiveCost, calculateMRP, calculateGstAmount } from '../../utils/pricingUtils';
 import { useCustomers } from '../../contexts/CustomersContext';
 
 
 // Define sales units
-const SALES_UNITS = ['Case', 'Packet', 'Piece'];
-// Define sales types
-const SALES_TYPES = ['Retail', 'Wholesale', 'Semi-Wholesale'];
+const SALES_UNITS = ['bag','bora','box','bun','case','dibbi','Dz','gm','hamger','jar','kg','Mala','pcs','Pkt','pouch','set','strip','Un'];
 
-type ItemEntryFormProps = {
-  onAddItem: (item: SaleItem) => void;
-  companies: any[];
+interface ItemEntryFormProps {
+  onAddItem: (saleItem: SaleItem) => void;
   items: Item[];
-};
+  companies?: Company[];  // Make companies prop optional
+  currentUser?: { name: string }; // Add this line
+}
 
 const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   onAddItem,
-  companies,
   items,
+  companies,
+  currentUser,
 }) => {
   const { groupedCustomers } = useCustomers();
   const [company,setCompany] = useState<string>('');
@@ -38,7 +38,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isItemPopoverOpen, setIsItemPopoverOpen] = useState<boolean>(false);
   const [quantity, setQuantity] = useState<number>(0);
-  const [salesUnit, setSalesUnit] = useState<string>('Piece');
+  const [salesUnit, setSalesUnit] = useState<string>('pcs');
   const [mrp, setMrp] = useState<number>(0);
   const [gstRate,setGstRate] = useState<number>(0)
   const [hsnCode,setHsnCode] = useState<string>('')
@@ -47,7 +47,6 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   const [discount, setDiscount] = useState<number>(0);
   const [discountType, setDiscountType] = useState<'amount' | 'percentage'>('amount');
   const [packagingDetails, setPackagingDetails] = useState<string>('');
-  const [salesType, setSalesType] = useState<string>('Retail');
 
   // Filter items based on search
   const filteredSearchItems = useMemo(() => {
@@ -64,42 +63,27 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   React.useEffect(() => {
     if (items && items.length > 0) {
       const item = items.find((item) => item.name === selectedItemName);
-      // console.log("item",item)
       if (item) {
+        console.log("item", item)
         setSelectedItem(item);
-        // Set default godown if available
+        // Modified godown selection logic
         if (item.godown && item.godown.length > 0) {
-          setSelectedGodown(item.godown[0].name);
+          // Check if current selectedGodown exists in the new item's godowns
+          const currentGodown = item.godown.find(g => g.name === selectedGodown);
+          if (currentGodown) {
+            // If current godown exists, keep it
+            setSelectedGodown(currentGodown.name);
+          } else {
+            // If current godown doesn't exist, set to first godown
+            setSelectedGodown(item.godown[0].name);
+          }
         } else {
           setSelectedGodown('');
         }
         // Set GST rate based on company and item
         setGstRate(item.gstPercentage);
         setHsnCode(item.hsn);
-        setCompany(item.company)
         setExclusiveCost(item.unitPrice || 0)
-        
-        // if (item.gstPercentage > 0) {
-        //   if (item.mrp) {
-        //     setMrp(item.mrp);
-        //     const calculatedExclusiveCost = calculateExclusiveCost(item.mrp, item.gstPercentage);
-        //     setExclusiveCost(calculatedExclusiveCost);
-        //     const calculatedGstAmount = calculatedExclusiveCost * (item.gstPercentage / 100) * (quantity || 0);
-        //     setGstAmount(calculatedGstAmount);
-        //   } else {
-        //     setExclusiveCost(item.unitPrice || 0);
-        //     const calculatedMrp = calculateMRP(item.unitPrice || 0, item.gstPercentage);
-        //     setMrp(calculatedMrp);
-        //     const calculatedGstAmount = (item.unitPrice || 0) * (item.gstPercentage / 100) * (quantity || 0);
-        //     setGstAmount(calculatedGstAmount);
-        //   }
-        // } else {
-        //   setExclusiveCost(item.unitPrice || 0);
-        //   setMrp(item.unitPrice || 0);
-        //   setGstAmount(0);
-        // }
-
-        
       } else {
         setSelectedItem(null);
         setMrp(0);
@@ -134,6 +118,9 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       toast.error('Please select a godown');
       return;
     }
+
+    console.log("selectedItem", selectedItem)
+
     let discountValue = 0;
     let discountPercentage = 0;
     if (discount > 0) {
@@ -152,31 +139,30 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       itemGstAmount = (discountedBaseAmount * gstRate) / 100;
     }
     const totalPrice = discountedBaseAmount + itemGstAmount;
-    
-    // Get company details
-    const itemCompany = selectedItem.company;
-    const companyId = selectedItem.companyId;
 
     const saleItem: SaleItem = {
-      itemId: '1',
-      companyName: itemCompany,
+      companyName: selectedItem.company,
       name: selectedItem.name,
       quantity,
       unitPrice: exclusiveCost,
-      mrp: mrp,
+      mrp: selectedItem.mrp,
       salesUnit,
-      salesType,
       gstPercentage: gstRate > 0 ? gstRate : undefined,
       gstAmount: itemGstAmount,
       discountValue: discountValue > 0 ? discountValue : undefined,
       discountPercentage: discountPercentage > 0 ? discountPercentage : undefined,
       totalPrice,
       totalAmount: totalPrice,
-      hsnCode: hsnCode || undefined,
-      packagingDetails: packagingDetails || undefined,
-      godown: selectedItem.godown ? selectedItem.godown.filter(g => g.name === selectedGodown) : [],
-      priceLevelList: selectedItem.priceLevelList || []
+      hsnCode: selectedItem.hsn || '',
+      packagingDetails: packagingDetails || '',
+      godown: selectedGodown, // Just pass the godown name directly
+      priceLevelList: selectedItem.priceList || [],
+      createdBy: currentUser?.name || '',
+      allUnits: selectedItem.allUnits || 'pcs'
     };
+
+    console.log("saleItem", saleItem)
+
     try {
       onAddItem(saleItem);
       resetForm();
@@ -201,7 +187,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
           )}
         </div>
         <div className="text-xs text-gray-600">
-          {item.company} | In stock: {item.stockQuantity} {item.salesUnit}
+          {item.company} | In stock: {item.stockQuantity}
         </div>
         {hasBulkPrices && (
           <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-2">
@@ -281,23 +267,6 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
                 </div>
               </PopoverContent>
             </Popover>
-          </div>
-
-          {/* Sales Type Dropdown - Add after Godown selection */}
-          <div className="w-[150px]">
-            <Label htmlFor="salesType" className="text-xs">Sales Type</Label>
-            <Select value={salesType} onValueChange={setSalesType}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                {SALES_TYPES.map((type) => (
-                  <SelectItem key={type} value={type} className="text-xs">
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Godown */}

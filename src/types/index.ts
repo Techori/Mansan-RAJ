@@ -26,43 +26,40 @@ export interface PriceLevel {
 
 
 export interface Item {
-  id: string;
   company: string;
-  companyId : string
-  // itemId: string;
   name: string;
-  // type: 'GST' | 'NON-GST';
   unitPrice: number;
   mrp?: number;
   gstPercentage?: number;
   hsn?: string;  
-  // godownId: string;
-  godown : Godown[],
+  godown : Godown[];
   stockQuantity: number;
-  salesUnit: 'Case' | 'Packet' | 'Piece';
+  salesUnit: string;
   createdAt: string;
   rateAfterGst : number,
+  allUnits : string,
   priceList : PriceLevel[]
 }
 
 export interface SaleItem {
-  itemId: string;
   companyName: string;
   name: string;
   quantity: number;
-  unitPrice: number; // Exclusive cost (without GST)
-  mrp?: number; // MRP (inclusive of GST)
-  discountValue?: number; // Discount amount in rupees
-  discountPercentage?: number; // Discount percentage
+  unitPrice: number;
+  mrp?: number;
+  discountValue?: number;
+  discountPercentage?: number;
   gstPercentage?: number;
   gstAmount?: number;
   hsnCode?: string;
-  packagingDetails?: string; // Added packaging details for Estimate company
-  totalPrice: number; // Final price after GST and discount
+  packagingDetails?: string;
+  totalPrice: number;
   totalAmount: number;
   salesUnit: string;
-  godown: Godown[];
+  godown?: string;
   priceLevelList: PriceLevel[];
+  createdBy?: string;
+  allUnits: string;
 }
 
 // Customer Type
@@ -78,7 +75,7 @@ export interface Customer {
 // Sale Type
 export interface Sale {
   id: string;
-  companyId: string;
+  companyId?: string;  // Made optional
   companyName: string;
   billNumber: string;
   date: string;

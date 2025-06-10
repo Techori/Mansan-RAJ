@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
 import { useSales } from '../../contexts/SalesContext';
-import { Item, SaleItem, Godown } from '../../types';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Item, SaleItem } from '../../types';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -18,24 +18,25 @@ const calculateGST = (price: number, quantity: number, gstPercentage: number) =>
 
 const SaleEntryForm: React.FC = () => {
   const { currentCompany } = useCompany();
-  // const { filteredItems, filteredGodowns } = useInventory();
+  const { items } = useInventory();
   const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems } = useSales();
 
-  const [selectedItemId, setSelectedItemId] = useState<string>('');
+  // Form state
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
   const [customerName, setCustomerName] = useState<string>('');
-  const [selectedGodownId, setSelectedGodownId] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'GST' | 'NON-GST'>('GST');
   const [salesUnit, setSalesUnit] = useState<string>('Piece');
+  const [activeTab, setActiveTab] = useState<'GST' | 'NON-GST'>('GST');
+  const [selectedGodown, setSelectedGodown] = useState<string>('');
 
-  // Group items by GST and Non-GST
-  const gstItems = filteredItems.filter((item) => item.type === 'GST');
-  const nonGstItems = filteredItems.filter((item) => item.type === 'NON-GST');
+  // Derived state for GST and Non-GST items
+  const gstSaleItems = useMemo(() => 
+    currentSaleItems.filter(item => item.gstPercentage && item.gstPercentage > 0)
+  , [currentSaleItems]);
 
-  // Group sale items by type
-  const gstSaleItems = currentSaleItems.filter((item) => item.gstPercentage !== undefined);
-  const nonGstSaleItems = currentSaleItems.filter((item) => item.gstPercentage === undefined);
+  const nonGstSaleItems = useMemo(() => 
+    currentSaleItems.filter(item => !item.gstPercentage || item.gstPercentage === 0)
+  , [currentSaleItems]);
 
   // Calculate totals
   const calculateTotals = (items: SaleItem[]) => {
@@ -52,23 +53,17 @@ const SaleEntryForm: React.FC = () => {
     return { subtotal, gstAmount, total };
   };
 
-  const gstTotals = calculateTotals(gstSaleItems);
-  const nonGstTotals = calculateTotals(nonGstSaleItems);
+  const gstTotals = useMemo(() => calculateTotals(gstSaleItems), [gstSaleItems]);
+  const nonGstTotals = useMemo(() => calculateTotals(nonGstSaleItems), [nonGstSaleItems]);
 
-  useEffect(() => {
-    if (filteredGodowns.length > 0 && !selectedGodownId) {
-      setSelectedGodownId(filteredGodowns[0].id);
-    }
-  }, [filteredGodowns, selectedGodownId]);
+  // Filter items based on GST status
+  const gstItems = useMemo(() => 
+    items.filter(item => item.gstPercentage && item.gstPercentage > 0)
+  , [items]);
 
-  useEffect(() => {
-    if (selectedItemId) {
-      const item = filteredItems.find((item) => item.id === selectedItemId);
-      setSelectedItem(item || null);
-    } else {
-      setSelectedItem(null);
-    }
-  }, [selectedItemId, filteredItems]);
+  const nonGstItems = useMemo(() => 
+    items.filter(item => !item.gstPercentage || item.gstPercentage === 0)
+  , [items]);
 
   const handleAddItem = () => {
     if (!selectedItem) {
@@ -94,7 +89,7 @@ const SaleEntryForm: React.FC = () => {
     let gstAmount = 0;
     let totalPrice = selectedItem.unitPrice * quantity;
 
-    if (selectedItem.type === 'GST' && selectedItem.gstPercentage) {
+    if (selectedItem.gstPercentage) {
       gstAmount = calculateGST(
         selectedItem.unitPrice,
         quantity,
@@ -104,21 +99,22 @@ const SaleEntryForm: React.FC = () => {
     }
 
     const saleItem: SaleItem = {
-      itemId: selectedItem.id,
-      companyId: currentCompany.id,
       companyName: currentCompany.name,
       name: selectedItem.name,
       quantity,
       unitPrice: selectedItem.unitPrice,
-      gstPercentage: selectedItem.type === 'GST' ? selectedItem.gstPercentage : undefined,
-      gstAmount: selectedItem.type === 'GST' ? gstAmount : undefined,
+      mrp: selectedItem.mrp,
+      gstPercentage: selectedItem.gstPercentage,
+      gstAmount: selectedItem.gstPercentage ? gstAmount : undefined,
+      hsnCode: selectedItem.hsn,
       totalPrice,
       totalAmount: totalPrice,
-      salesUnit: salesUnit,
+      salesUnit,
+      godown: selectedItem.godown ? selectedItem.godown.find(g => g.name === selectedGodown) : undefined,
+      priceLevelList: selectedItem.priceList || []
     };
 
     addSaleItem(saleItem);
-    setSelectedItemId('');
     setQuantity(1);
   };
 
@@ -137,12 +133,11 @@ const SaleEntryForm: React.FC = () => {
       // Create separate bills for GST and Non-GST items
       if (gstSaleItems.length > 0) {
         createSale({
-          companyId: currentCompany.id,
+          companyName: currentCompany.name,
           billNumber: `GST-${Date.now()}`,
           date: new Date().toISOString(),
           customerName,
           billType: 'GST',
-          godownId: selectedGodownId,
           totalAmount: gstTotals.total,
           items: gstSaleItems
         });
@@ -150,35 +145,32 @@ const SaleEntryForm: React.FC = () => {
 
       if (nonGstSaleItems.length > 0) {
         createSale({
-          companyId: currentCompany.id,
+          companyName: currentCompany.name,
           billNumber: `NON-${Date.now()}`,
           date: new Date().toISOString(),
           customerName,
           billType: 'NON-GST',
-          godownId: selectedGodownId,
           totalAmount: nonGstTotals.total,
           items: nonGstSaleItems
         });
       }
     } else if (gstSaleItems.length > 0) {
       createSale({
-        companyId: currentCompany.id,
+        companyName: currentCompany.name,
         billNumber: `GST-${Date.now()}`,
         date: new Date().toISOString(),
         customerName,
         billType: 'GST',
-        godownId: selectedGodownId,
         totalAmount: gstTotals.total,
         items: gstSaleItems
       });
     } else if (nonGstSaleItems.length > 0) {
       createSale({
-        companyId: currentCompany.id,
+        companyName: currentCompany.name,
         billNumber: `NON-${Date.now()}`,
         date: new Date().toISOString(),
         customerName,
         billType: 'NON-GST',
-        godownId: selectedGodownId,
         totalAmount: nonGstTotals.total,
         items: nonGstSaleItems
       });
@@ -189,6 +181,7 @@ const SaleEntryForm: React.FC = () => {
 
     // Reset form
     setCustomerName('');
+    clearSaleItems();
   };
 
   if (!currentCompany) {
@@ -203,7 +196,7 @@ const SaleEntryForm: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Customer Info Only (remove Godown from here) */}
+      {/* Customer Info */}
       <Card className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -235,14 +228,20 @@ const SaleEntryForm: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div className="col-span-1 md:col-span-2">
                     <Label htmlFor="item">Select Item</Label>
-                    <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                    <Select 
+                      value={selectedItem?.name || ''} 
+                      onValueChange={(value) => {
+                        const item = items.find(i => i.name === value);
+                        setSelectedItem(item || null);
+                      }}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select an item" />
                       </SelectTrigger>
                       <SelectContent>
                         {displayItems.map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.name} - ₹{item.unitPrice} {item.type === 'GST' && `(GST: ${item.gstPercentage}%)`}
+                          <SelectItem key={item.name} value={item.name}>
+                            {item.name} - ₹{item.unitPrice} {item.gstPercentage ? `(GST: ${item.gstPercentage}%)` : ''}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -268,24 +267,27 @@ const SaleEntryForm: React.FC = () => {
                       </Button>
                     </div>
                   </div>
-                  <div>
-                    <Label htmlFor="godown">Godown *</Label>
-                    <Select 
-                      value={selectedGodownId} 
-                      onValueChange={setSelectedGodownId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select godown" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredGodowns.map((godown) => (
-                          <SelectItem key={godown.id} value={godown.id}>
-                            {godown.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+
+                  {selectedItem?.godown && selectedItem.godown.length > 0 && (
+                    <div>
+                      <Label htmlFor="godown">Godown *</Label>
+                      <Select 
+                        value={selectedGodown} 
+                        onValueChange={setSelectedGodown}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select godown" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedItem.godown.map((godown) => (
+                            <SelectItem key={godown.name} value={godown.name}>
+                              {godown.name} ({godown.quantity})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="mb-4">

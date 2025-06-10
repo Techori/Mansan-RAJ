@@ -209,6 +209,7 @@ export async function parseStockItemPriceList(xmlString, companyName) {
         resultDict["standard_cost"] = getElementText(stockitemFullBlock, "STANDARDCOST");
         resultDict["standard_price"] = getElementText(stockitemFullBlock, "STANDARDPRICE");
         resultDict["stock_quantity"] = getElementText(stockitemFullBlock, "CLOSINGBALANCE");
+        resultDict["base_units"] = getElementText(stockitemFullBlock, "BASEUNITS");
 
         const { block: hsndetailsBlock } = getElementBlock(stockitemFullBlock, "HSNDETAILS.LIST");
         if (hsndetailsBlock) {

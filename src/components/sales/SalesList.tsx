@@ -1,20 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSales } from '../../contexts/SalesContext';
 import { Sale } from '../../types';
-import { useInventory } from '../../contexts/InventoryContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Eye, Calendar, Printer } from 'lucide-react';
 import { format } from 'date-fns';
-import { useCompany } from '../../contexts/CompanyContext';
-import { toast } from 'sonner';
 import { PrintBillModal } from './PrintBillModal';
 import Loader from '../ui/loader';
 
 const SalesList: React.FC = () => {
   const { filteredSales } = useSales();
-  const { filteredGodowns } = useInventory();
-  const { currentCompany } = useCompany();
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,7 +54,7 @@ const SalesList: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sortedSales.map((sale) => {
           const uniqueCompanies = getUniqueCompanies(sale);
-          const hasMultipleCompanies = uniqueCompanies.length > 1;
+          // const hasMultipleCompanies = uniqueCompanies.length > 1;
 
           return (
             <Card key={sale.id} className="p-4">
