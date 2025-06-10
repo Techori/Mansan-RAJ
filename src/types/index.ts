@@ -62,7 +62,7 @@ export interface SaleItem {
   totalAmount: number;
   salesUnit: string;
   godown: Godown[];
-  salesType: string;
+  priceLevelList: PriceLevel[];
 }
 
 // Customer Type

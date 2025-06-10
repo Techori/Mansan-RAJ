@@ -14,7 +14,7 @@ export const mapGodown = (godownJSON,priceListJSON) => {
         //
         if(match)
         {
-            console.log(match,true)
+            // console.log(match,true)
             const {godowns} = match;
             const godownDetails  = godowns.map((gd)=>({
                 name : gd.name,
