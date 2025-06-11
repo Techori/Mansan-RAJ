@@ -5,6 +5,7 @@ import { connectToTally } from './config/tally.config.js';
 import stockTallyRoutes from './routes/stockTallyRoutes.js';
 import customerTallyRoutes from './routes/customerTallyRoutes.js';
 import salesTallyRoutes from './routes/salesTallyRoutes.js';
+import billNumberRoutes from './routes/billNumberRoutes.js';
 
 
 
@@ -27,6 +28,8 @@ app.get("/",(req,res)=>{
 const connectionStatus = await connectToTally();
 console.log(connectionStatus);
 
+app.use('/api/bill-numbers', billNumberRoutes);
+
 if(connectionStatus)
 {
     //tally is connected successfully....
@@ -37,7 +40,8 @@ if(connectionStatus)
     app.use('/api/tally/customers', customerTallyRoutes)
     //create sales
     app.use('/api/tally/sales', salesTallyRoutes)
-
+    // Bill number management
+    
 
     //NOW CALL TALLY-RELATED APISN HERE...
 }

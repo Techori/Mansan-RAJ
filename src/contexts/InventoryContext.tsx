@@ -8,6 +8,7 @@ interface InventoryContextType {
   getAllItems: () => Item[];
   isLoading: boolean;
   error: string | null;
+  fetchItems: (forceApi?: boolean) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -42,34 +43,23 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
     setItems(mappedItems);
   }
 
-  const fetchItems = async () => {
-
-    if (localStorage.getItem('items')) {
+  const fetchItems = async (forceApi = false) => {
+    if (!forceApi && localStorage.getItem('items')) {
       const parsedItems = JSON.parse(localStorage.getItem('items') || '[]');
       setItems(parsedItems);
       setIsLoading(false);
       mapItems(parsedItems);
     } else {
-
-
-
-
       try {
         setIsLoading(true);
         setError(null);
-
         const result = await axios.post('/api/tally/stocks/fetch-items');
         localStorage.setItem('items', JSON.stringify(result.data));
-        console.log("result", result.data)
-
+        mapItems(result.data);
         if (!result.data) {
           throw new Error('No data received from server');
         }
-
-
-      }
-
-      catch (err: any) {
+      } catch (err: any) {
         const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch inventory items';
         console.error('Error fetching items:', errorMessage);
         setError(errorMessage);
@@ -77,8 +67,8 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
       } finally {
         setIsLoading(false);
       }
-    };
-  }  
+    }
+  };
 
 
     const getAllItems = (): Item[] => {
@@ -97,7 +87,8 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
           items,
           getAllItems,
           isLoading,
-          error
+          error,
+          fetchItems
         }}
       >
         {children}
