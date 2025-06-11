@@ -10,4 +10,5 @@ router.post('/create-sale',postSales)
 
 
 
+
 export default router;

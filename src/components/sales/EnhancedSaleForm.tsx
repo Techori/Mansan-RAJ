@@ -269,7 +269,8 @@ const EnhancedSaleForm: React.FC = () => {
       //call api
       try {
         const promises = createdSales.map(sale =>
-          axios.post('/api/tally/sales/create-sale', sale)
+          axios.post('/api/tally/sales/create-sale?companyName='+sale.companyName, sale)
+
         );
 
         const results = await Promise.all(promises);
