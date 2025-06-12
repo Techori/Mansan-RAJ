@@ -1,13 +1,11 @@
 import { convert } from '../createSalesFunctions.js';
 
-//give items as input
-
 export function itemManipulationMSR(items) {
-
   const newItems = items.map((item) => {
-    const { billed_qty, billed_unit, all_units } = item;
+    const { quantity: billed_qty, salesUnit: billed_unit, allUnits: all_units, priceLevelList: price_level_list, gstPercentage: gst_rate } = item;
+    if (!item.discountPercent) { item.discountPercent = 0 };
 
-    item.standard_unit = item.price_level_list[0].rate.split('/').pop();
+    item.standard_unit = price_level_list[0].rate.split('/').pop();
 
     let standardQty = billed_qty; // billed_unit === standard_unit
 
@@ -16,7 +14,7 @@ export function itemManipulationMSR(items) {
       standardQty = convert(billed_qty, billed_unit, item.standard_unit, all_units);
     }
 
-    for (const rList of item.price_level_list) {
+    for (const rList of price_level_list) {
       const start = parseInt(rList.starting_from.split(' ').shift()) || 0;
       const end = parseInt(rList.ending_at.split(' ').shift()) || Infinity;
 
@@ -30,7 +28,7 @@ export function itemManipulationMSR(items) {
     item.applicable_rate = parseFloat((applicable_rate / billed_qty).toFixed(2));
 
     let iTax = 0;
-    if (item.gst_rate > 0) {
+    if (gst_rate > 0) {
       const tax_ledgers = [
         {
           "ledger": "CGST",
@@ -44,22 +42,74 @@ export function itemManipulationMSR(items) {
         }
       ]
 
-      tax_ledgers[0].rate = tax_ledgers[1].rate = item.gst_rate / 2;
-      iTax = applicable_rate * item.gst_rate / 100;
-      tax_ledgers[0].amount = tax_ledgers[1].amount = iTax / 2;
+      tax_ledgers[0].rate = tax_ledgers[1].rate = gst_rate / 2;
+      iTax = applicable_rate * gst_rate / 100;
+      tax_ledgers[0].amount = tax_ledgers[1].amount = parseFloat((iTax / 2).toFixed(2));
 
       item.tax_ledgers = tax_ledgers;
     }
 
-    item.total_amount = item.amount_excl_gst + iTax;
+    item.total_amount = parseFloat((item.amount_excl_gst + iTax).toFixed(2));
 
 
     return item;
   });
 
-  // console.log(newItems);
-  // console.log(newItems[0].tax_ledgers);
-  // console.log(newItems[1].tax_ledgers);
-  return newItems;
- 
+  const taxInfo = [
+    {
+      "ledger": "CGST@2.5%",
+      "amount": 0
+    },
+    {
+      "ledger": "SGST@2.5%",
+      "amount": 0
+    },
+    {
+      "ledger": "CGST@6%",
+      "amount": 0
+    },
+    {
+      "ledger": "SGST@6%",
+      "amount": 0
+    },
+    {
+      "ledger": "CGST@9%",
+      "amount": 0
+    },
+    {
+      "ledger": "SGST@9%",
+      "amount": 0
+    },
+    {
+      "ledger": "CGST@14%",
+      "amount": 0
+    },
+    {
+      "ledger": "SGST@14%",
+      "amount": 0
+    }
+  ];
+
+  newItems.forEach((item) => {
+    if (item.tax_ledgers) {
+      item.tax_ledgers.forEach((tax) => {
+        const matchingTax = taxInfo.find((taxInfo) => taxInfo.ledger === `${tax.ledger}@${tax.rate}%`);
+        if (matchingTax) {
+          matchingTax.amount += tax.amount;
+        } else {
+          if (tax.ledger === "SGST" && tax.rate === 2.5) {
+            taxInfo[1].amount += tax.amount;
+          } else if (tax.ledger === "CGST" && tax.rate === 2.5) {
+            taxInfo[0].amount += tax.amount;
+          }
+        }
+      });
+    }
+  });
+
+  // remove the zeros
+
+  const filteredTaxInfo = taxInfo.filter(tax => tax.amount !== 0);
+
+  return { newItems, filteredTaxInfo };
 }

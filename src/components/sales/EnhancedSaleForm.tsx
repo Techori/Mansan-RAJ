@@ -75,7 +75,7 @@ const EnhancedSaleForm: React.FC = () => {
     }
 
     currentSaleItems.forEach(item => {
-      console.log("item",item)
+      console.log("item", item)
       const companyName = item.companyName;
       if (!companyName) {
         console.warn(`Company name not found for item ${item.name}`);
@@ -191,7 +191,7 @@ const EnhancedSaleForm: React.FC = () => {
   }, [currentSaleItems]);
 
   // Handle create sale
-  const handleCreateSale = async() => {
+  const handleCreateSale = async () => {
     if (!currentSaleItems || currentSaleItems.length === 0) {
       toast.error('No items added to sale');
       return;
@@ -202,7 +202,7 @@ const EnhancedSaleForm: React.FC = () => {
       return;
     }
 
-    console.log("currentSaleItems",currentSaleItems)
+    console.log("currentSaleItems", currentSaleItems)
 
     try {
       const validation = validateCompanyItems(currentSaleItems);
@@ -265,22 +265,21 @@ const EnhancedSaleForm: React.FC = () => {
         }
       }
 
-      console.log("createdSales",createdSales)
+      console.log("createdSales", createdSales)
       //call api
       try {
         const promises = createdSales.map(sale =>
-          axios.post('/api/tally/sales/create-sale?companyName='+sale.companyName, sale)
+          axios.post('/api/tally/sales/create-sale', sale)
 
         );
 
         const results = await Promise.all(promises);
-        results.forEach(res => console.log(res.data));  // or res.status, etc.
-      } 
-       
-        
-      catch(err)
-      {
-        console.log('Error creating sales to tally',err.message)
+        results.forEach(res => console.log('frontend', res.data));  // or res.status, etc.
+      }
+
+
+      catch (err) {
+        console.log('Error creating sales to tally', err.message)
       }
 
       if (createdSales.length > 0) {

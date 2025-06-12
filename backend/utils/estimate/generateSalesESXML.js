@@ -1,27 +1,20 @@
-import { tallyRoundOff } from '../createSalesFunctions.js';
+import { tallyRoundOff } from '../createSalesFunctions.js'
 
-export function generateSalesMSRXML(companyName, priceLevel, voucherNumber, partyLedger, items, narration, tax_info, enteredBy) {
+export default function generateSalesESXML(companyName, priceLevel, voucherNumber, partyLedger, items, narration, enteredBy) {
+  console.log("In ESXML", items);
 
   let totalBillAmount = 0;
   // const date = new Date().toISOString().slice(0, 10).split('-').join('')
   const date = '20250602';
 
-  const salesLedgerNameXML = (gst_rate) => {
-    if (gst_rate === 0) {
-      return `<LEDGERNAME>SALES@EXEMPTED</LEDGERNAME>`
-    } else {
-      return `<LEDGERNAME>Sales@${gst_rate}%</LEDGERNAME>`;
-    }
-
-  }
   // Inventory Lines
   const itemLinesXML = items.map(item => {
-    // Calculate the item's value AFTER discount, but BEFORE tax
-    const { quantity: billed_qty, applicable_rate, name: item_name, salesUnit: billed_unit, gstPercentage: gst_rate } = item;
+
+    const { quantity: billed_qty, applicable_rate, name: item_name, salesUnit: billed_unit } = item;
     const grossItemValue = (billed_qty * applicable_rate);
     const discountAmountForItem = grossItemValue * parseFloat((item.discountPercent / 100).toFixed(2));
     const netItemValueExcludingTax = grossItemValue - discountAmountForItem;
-    totalBillAmount += (parseFloat((netItemValueExcludingTax).toFixed(2)) + item.tax_ledgers[0].amount + item.tax_ledgers[1].amount)
+    totalBillAmount += parseFloat((netItemValueExcludingTax).toFixed(2));
 
     // Conditionally include the <DISCOUNT> tag
     const discountTag = item.discountPercent > 0 ? `<DISCOUNT> ${item.discountPercent}</DISCOUNT>` : '';
@@ -38,18 +31,19 @@ export function generateSalesMSRXML(companyName, priceLevel, voucherNumber, part
         <GODOWNNAME>${item.godown}</GODOWNNAME>
         <BATCHNAME>Primary Batch</BATCHNAME>
         <DESTINATIONGODOWNNAME>${item.godown}</DESTINATIONGODOWNNAME>
-        <AMOUNT>${netItemValueExcludingTax.toFixed(2)}</AMOUNT>
+        <AMOUNT>${netItemValueExcludingTax.toFixed(2)}</AMOUNT> 
         <ACTUALQTY>${billed_qty} ${billed_unit}</ACTUALQTY>
         <BILLEDQTY>${billed_qty} ${billed_unit}</BILLEDQTY>
       </BATCHALLOCATIONS.LIST>
       <ACCOUNTINGALLOCATIONS.LIST>
-        ${salesLedgerNameXML(gst_rate)}
+        <LEDGERNAME>Sale</LEDGERNAME>
         <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-        <AMOUNT>${netItemValueExcludingTax.toFixed(2)}</AMOUNT> </ACCOUNTINGALLOCATIONS.LIST>
+        <AMOUNT>${item.total_amount}</AMOUNT>
+      </ACCOUNTINGALLOCATIONS.LIST>
     </ALLINVENTORYENTRIES.LIST>
   `;
   }).join('\n');
-  // console.log(totalBillAmount.toFixed(2));
+  console.log("TOTAL AMOUNT: ",totalBillAmount);
   const { roundedTotal, roundOffAmount, isNegative } = tallyRoundOff(totalBillAmount);
   totalBillAmount = roundedTotal;
   // console.log(totalBillAmount);
@@ -75,20 +69,12 @@ export function generateSalesMSRXML(companyName, priceLevel, voucherNumber, part
       </BILLALLOCATIONS.LIST>
     </LEDGERENTRIES.LIST>`;
 
-  // Tax Ledgers (CGST + SGST)
-  const taxLedgerXML = tax_info.map(tax => `<LEDGERENTRIES.LIST>
-      <LEDGERNAME>${tax.ledger}</LEDGERNAME>
-      <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-      <AMOUNT>${tax.amount.toFixed(2)}</AMOUNT>
-    </LEDGERENTRIES.LIST>`).join('\n');
-
-
-
   const priceLevelXML = priceLevel && `<PRICELEVEL>${priceLevel}</PRICELEVEL>`;
 
   const svPriceLevel = priceLevel && `<SVPRICELEVEL>${priceLevel}</SVPRICELEVEL>`;
 
   const now = new Date();
+
   const dateTime = now.toLocaleString('en-US', {
     month: 'numeric',
     day: 'numeric',
@@ -103,7 +89,7 @@ export function generateSalesMSRXML(companyName, priceLevel, voucherNumber, part
   <UDF:GVCHCREATEDBY.LIST DESC="\`GVchCreatedBy\`" ISLIST="YES" TYPE="String" INDEX="2202">
     <UDF:GVCHCREATEDBY DESC="\`GVchCreatedBy\`">${enteredBy}</UDF:GVCHCREATEDBY>
   </UDF:GVCHCREATEDBY.LIST>
-  `;
+  `
 
   const dateTimeXML = `
   <UDF:BSINVDATETIME.LIST DESC="\`BSInvDateTime\`" ISLIST="YES" TYPE="String" INDEX="2201">
@@ -111,55 +97,68 @@ export function generateSalesMSRXML(companyName, priceLevel, voucherNumber, part
   </UDF:BSINVDATETIME.LIST>
   `;
 
-
   return `
-<?xml version="1.0" encoding="UTF-8"?>
-<ENVELOPE>
-  <HEADER>
-    <VERSION>1</VERSION>
-    <TALLYREQUEST>Import</TALLYREQUEST>
-    <TYPE>Data</TYPE>
-    <ID>Vouchers</ID>
-  </HEADER>
-  <BODY>
-    <DESC>
-      <STATICVARIABLES>
-        <SVCURRENTCOMPANY>${companyName}</SVCURRENTCOMPANY>
-        ${svPriceLevel}
-      </STATICVARIABLES>
-    </DESC>
-    <DATA>
-      <TALLYMESSAGE>
-        <VOUCHER VCHTYPE="Tax Invoice" ACTION="Create" ASVCHCLASS="GST Class Sales">
-          <DATE>${date}</DATE>
-          <VOUCHERTYPENAME>Tax Invoice</VOUCHERTYPENAME>
-          <VOUCHERNUMBER>${voucherNumber}</VOUCHERNUMBER>
-          <PERSISTEDVIEW>Invoice Voucher View</PERSISTEDVIEW>
-          <ISINVOICE>Yes</ISINVOICE>
-          <OBJVIEW>Invoice Voucher View</OBJVIEW>
-          ${priceLevelXML}
-          <PARTYLEDGERNAME>${partyLedger}</PARTYLEDGERNAME>
-          <BASICBUYERNAME>${partyLedger}</BASICBUYERNAME>
-          <ENTEREDBY>${enteredBy}</ENTEREDBY>
-          <NARRATION>${narration}</NARRATION>
-          <CLASSNAME>GST Class Sales</CLASSNAME> 
-          ${itemLinesXML}
-          ${customerLedgerXML}
-          ${taxLedgerXML}
-          ${roundOffAmount == 0.00 ? '' : roundOffXML}
-          ${dateTimeXML}
-          ${enteredByXML}
-        </VOUCHER>
-      </TALLYMESSAGE>
-    </DATA>
-  </BODY>
-</ENVELOPE>`.trim(); // replace(/\n/g, '').trim();
+  <?xml version="1.0" encoding="UTF-8"?>
+  <ENVELOPE>
+    <HEADER>
+      <VERSION>1</VERSION>
+      <TALLYREQUEST>Import</TALLYREQUEST>
+      <TYPE>Data</TYPE>
+      <ID>Vouchers</ID>
+    </HEADER>
+    <BODY>
+      <DESC>
+        <STATICVARIABLES>
+          <SVCURRENTCOMPANY>${companyName}</SVCURRENTCOMPANY>
+          ${svPriceLevel}
+        </STATICVARIABLES>
+      </DESC>
+      <DATA>
+        <TALLYMESSAGE>
+          <VOUCHER VCHTYPE="Estimate" ACTION="Create">
+            <DATE>${date}</DATE>
+            <VOUCHERTYPENAME>Estimate</VOUCHERTYPENAME>
+            <VOUCHERNUMBER>${voucherNumber}</VOUCHERNUMBER>
+            <PERSISTEDVIEW>Invoice Voucher View</PERSISTEDVIEW>
+            <ISINVOICE>Yes</ISINVOICE>
+            <OBJVIEW>Invoice Voucher View</OBJVIEW>
+            ${priceLevelXML}
+            <PARTYLEDGERNAME>${partyLedger}</PARTYLEDGERNAME>
+            <BASICBUYERNAME>${partyLedger}</BASICBUYERNAME>
+            <ENTEREDBY>${enteredBy}</ENTEREDBY>
+            <NARRATION>${narration}</NARRATION>
+            ${itemLinesXML}
+            ${customerLedgerXML}
+            ${roundOffAmount == 0.00 ? '' : roundOffXML}
+            ${dateTimeXML}
+            ${enteredByXML}
+          </VOUCHER>
+        </TALLYMESSAGE>
+      </DATA>
+    </BODY>
+  </ENVELOPE>`.trim(); // replace(/\n/g, '').trim();
 }
 
+// const items = [
+//   {
+//     "item_name": "Snk Panmasala@2.50   1bora&quot;2bag&quot;51pkt**(70Pcs)",
+//     "godown": "Z Godown",
+//     "billed_qty": 6,
+//     "all_units": "bora",
+//     "standard_rate": 15100.00,
+//     "standard_unit": "bora",
+//     "applicable_rate": 15100.00,
+//     "billed_unit": "bora",
+//     "amount_excl_gst": 245.00,
+//     "total_amount": 90600.00,
+//     "rate_per": "pcs",
+//     "discountPercent": 0,
+//   },
 
+// ];
 
-// const xml = generateSalesMSRXML("ManSan Raj Traders", "Retail", "pos-1", "20250602", "Tax Invoice", "Cash", items, "narration by PM", filteredTaxInfo, "Pranav");
-// console.log(xml);
+// const xml = generateTallyXML("Estimate", "Retail", "pos-1", "20250602", "Estimate", "Agrawal Store Thadikhana(9140891971)", items, "narration by PM", "Pranav");
+// // console.log(xml);
 
 // fs.writeFileSync("test.xml", xml);
 
