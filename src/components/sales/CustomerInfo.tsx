@@ -37,7 +37,9 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
   onCustomerNameChange,
   onAddCustomer,
   taxInvoiceNo = '',
-  onTaxInvoiceNoChange = () => {},
+  onTaxInvoiceNoChange = () => {
+
+  },
   estimateNo = '',
   onEstimateNoChange = () => {},
   priceLevel = '',

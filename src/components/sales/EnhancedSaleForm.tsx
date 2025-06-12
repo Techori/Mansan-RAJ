@@ -66,6 +66,42 @@ const EnhancedSaleForm: React.FC = () => {
     setIsLoading(!hasItems);
   }, [items]);
 
+  //set taxInvoiceNo and estimateNo
+
+  useEffect(() => {
+
+
+    const fetchVouchers = async () => {
+      try {
+
+        const company1 = encodeURI("ManSan Raj Traders")
+        const company2 = encodeURI("Estimate")
+
+        const [currentTaxInvoiceNo, currentEstimateNo] = await Promise.all([
+          axios.get(`api/bill-numbers/${company1}`),
+          axios.get(`api/bill-numbers/${company2}`)
+        ]);
+
+        setTaxInvoiceNo(currentTaxInvoiceNo.data.billNumber);
+        setEstimateNo(currentEstimateNo.data.billNumber)
+
+        
+      }
+      
+    catch (err) {
+      console.log(`Error fetching voucher no : ${err.message}`)
+
+    }
+
+    
+  }
+
+  fetchVouchers();
+
+
+
+  }, [items])
+
   // Calculate company summaries for the bill
   const companySummaries = useMemo(() => {
     const summaries: Record<string, CompanySummary> = {};
@@ -75,7 +111,7 @@ const EnhancedSaleForm: React.FC = () => {
     }
 
     currentSaleItems.forEach(item => {
-      console.log("item", item)
+      console.log("item",item)
       const companyName = item.companyName;
       if (!companyName) {
         console.warn(`Company name not found for item ${item.name}`);
@@ -231,39 +267,41 @@ const EnhancedSaleForm: React.FC = () => {
       for (const [companyName, items] of Object.entries(itemsByCompany)) {
         const hasGst = items.some(item => item.gstPercentage && item.gstPercentage > 0);
         const billType = hasGst ? 'GST' as const : 'NON-GST' as const;
-        const billNumber = `${companyName.substring(0, 3).toUpperCase()}-${Date.now()}`;
+        let billNumber = '';
 
-        const billData = {
-          companyName,
-          billNumber,
-          date: new Date().toISOString(),
-          customerName,
-          billType,
-          items,
-          totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
-          createdBy: currentUser?.name || 'Unknown',
-          taxInvoiceNo,
-          estimateNo,
-          priceLevel,
-          customerMobile,
-        };
+        try {
+          const companyKey = companyName;
+          const encodedCompany = encodeURI(companyKey);
 
-        //TO-Do add price level to the bill (Retail, Wholesale, Semi-Wholesale)
-        //TO-Do mock voucher no..
-        //TO-Do customer name
-        //TO-DO items should be shown in items array
-        //TO-Do implement selected godown
-        //TO-Do for all items, give base units
-        //TO-Do billed quantity
-        //TO-Do billed units
-        //TO-Do add drop down entries for all units
-        //TO-Do
+          //call to api to get bill number and update it...
 
-        const sale = createSale(billData);
-        if (sale) {
-          createdSales.push(sale);
+          const currentBillNumber = await axios.post(`/api/bill-numbers/${encodedCompany}/increment`)
+
+          billNumber = currentBillNumber.data.billNumber
+          
+
+          const billData = {
+            companyName,
+            billNumber,
+            date: new Date().toISOString(),
+            customerName,
+            billType,
+            items,
+            totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
+            createdBy: currentUser?.name || 'Unknown',
+            taxInvoiceNo,
+            estimateNo,
+            priceLevel,
+            customerMobile,
+          };
+
+          const sale = createSale(billData);
+          if (sale) {
+            createdSales.push(sale);
+          }
+        } catch (err) {
+          console.log(err.message)
         }
-      }
 
       console.log("createdSales", createdSales)
       //call api
@@ -273,6 +311,11 @@ const EnhancedSaleForm: React.FC = () => {
 
         );
 
+          const results = await Promise.all(promises);
+          results.forEach(res => console.log(res.data));
+        } catch (err) {
+          console.log('Error creating sales to tally', err.message)
+        }
         const results = await Promise.all(promises);
         results.forEach(res => console.log('frontend', res.data));  // or res.status, etc.
       }
@@ -282,16 +325,17 @@ const EnhancedSaleForm: React.FC = () => {
         console.log('Error creating sales to tally', err.message)
       }
 
-      if (createdSales.length > 0) {
-        setCreatedSale(createdSales);
-        clearSaleItems();
-        setCustomerName('');
-        setTaxInvoiceNo('');
-        setEstimateNo('');
-        setPriceLevel('');
-        setCustomerMobile('');
-        setExtraValue('');
-        setIsPrintModalOpen(true);
+        if (createdSales.length > 0) {
+          setCreatedSale(createdSales);
+          clearSaleItems();
+          setCustomerName('');
+          setTaxInvoiceNo('');
+          setEstimateNo('');
+          setPriceLevel('');
+          setCustomerMobile('');
+          setExtraValue('');
+          setIsPrintModalOpen(true);
+        }
       }
     } catch (error) {
       console.error('Error creating sale:', error);
