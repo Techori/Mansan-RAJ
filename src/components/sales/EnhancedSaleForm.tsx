@@ -82,7 +82,10 @@ const EnhancedSaleForm: React.FC = () => {
           axios.get(`api/bill-numbers/${company2}`)
         ]);
 
-        console.log(currentTaxInvoiceNo.data,currentEstimateNo.data)
+        setTaxInvoiceNo(currentTaxInvoiceNo.data.billNumber);
+        setEstimateNo(currentEstimateNo.data.billNumber)
+
+        
       }
       
     catch (err) {
@@ -90,8 +93,10 @@ const EnhancedSaleForm: React.FC = () => {
 
     }
 
-    fetchVouchers();
+    
   }
+
+  fetchVouchers();
 
 
 
@@ -270,8 +275,10 @@ const EnhancedSaleForm: React.FC = () => {
 
           //call to api to get bill number and update it...
 
-          const currentBillNumber = axios.post(`/api/bill-numbers/${encodedCompany}/increment`)
-          console.log(currentBillNumber)
+          const currentBillNumber = await axios.post(`/api/bill-numbers/${encodedCompany}/increment`)
+
+          billNumber = currentBillNumber.data.billNumber
+          
 
           const billData = {
             companyName,
