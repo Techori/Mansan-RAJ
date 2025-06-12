@@ -85,18 +85,18 @@ const EnhancedSaleForm: React.FC = () => {
         setTaxInvoiceNo(currentTaxInvoiceNo.data.billNumber);
         setEstimateNo(currentEstimateNo.data.billNumber)
 
-        
+
       }
-      
-    catch (err) {
-      console.log(`Error fetching voucher no : ${err.message}`)
+
+      catch (err) {
+        console.log(`Error fetching voucher no : ${err.message}`)
+
+      }
+
 
     }
 
-    
-  }
-
-  fetchVouchers();
+    fetchVouchers();
 
 
 
@@ -111,7 +111,7 @@ const EnhancedSaleForm: React.FC = () => {
     }
 
     currentSaleItems.forEach(item => {
-      console.log("item",item)
+      console.log("item", item)
       const companyName = item.companyName;
       if (!companyName) {
         console.warn(`Company name not found for item ${item.name}`);
@@ -278,7 +278,7 @@ const EnhancedSaleForm: React.FC = () => {
           const currentBillNumber = await axios.post(`/api/bill-numbers/${encodedCompany}/increment`)
 
           billNumber = currentBillNumber.data.billNumber
-          
+
 
           const billData = {
             companyName,
@@ -303,127 +303,130 @@ const EnhancedSaleForm: React.FC = () => {
           console.log(err.message)
         }
 
-      console.log("createdSales", createdSales)
-      //call api
-      try {
-        const promises = createdSales.map(sale =>
-          axios.post('/api/tally/sales/create-sale', sale)
+        console.log("createdSales", createdSales)
+        //call api
+        try {
+          const promises = createdSales.map(sale =>
+            axios.post('/api/tally/sales/create-sale', sale)
 
-        );
+          );
+
 
           const results = await Promise.all(promises);
-          results.forEach(res => console.log(res.data));
+          results.forEach(res => console.log("frontend",res.data));
+
+
         } catch (err) {
           console.log('Error creating sales to tally', err.message)
         }
-        const results = await Promise.all(promises);
-        results.forEach(res => console.log('frontend', res.data));  // or res.status, etc.
+      // or res.status, etc.
+      
       }
 
 
-      catch (err) {
-        console.log('Error creating sales to tally', err.message)
+    
+
+      if (createdSales.length > 0) {
+        setCreatedSale(createdSales);
+        clearSaleItems();
+        setCustomerName('');
+        setTaxInvoiceNo('');
+        setEstimateNo('');
+        setPriceLevel('');
+        setCustomerMobile('');
+        setExtraValue('');
+        setIsPrintModalOpen(true);
       }
 
-        if (createdSales.length > 0) {
-          setCreatedSale(createdSales);
-          clearSaleItems();
-          setCustomerName('');
-          setTaxInvoiceNo('');
-          setEstimateNo('');
-          setPriceLevel('');
-          setCustomerMobile('');
-          setExtraValue('');
-          setIsPrintModalOpen(true);
-        }
-      }
+
+  
     } catch (error) {
-      console.error('Error creating sale:', error);
-      toast.error('Failed to create sale');
-    }
-  };
-
-  // Mock price levels data
-  const mockPriceLevels = useMemo(() => [
-    { id: 'Retail', name: 'Retail' },
-    { id: 'Wholesale', name: 'Wholesale' },
-    { id: 'Semi-Wholesale', name: 'Semi-Wholesale' },
-  ], []);
-
-  if (isLoading) {
-    return <Loader />;
+    console.error('Error creating sale:', error);
+    toast.error('Failed to create sale');
   }
+};
 
-  return (
-    <div className="space-y-6">
-      <CustomerInfo
-        customerName={customerName}
-        onCustomerNameChange={setCustomerName}
-        onAddCustomer={() => toast.info('Customer management is now handled through ledgers')}
-        taxInvoiceNo={taxInvoiceNo}
-        onTaxInvoiceNoChange={setTaxInvoiceNo}
-        estimateNo={estimateNo}
-        onEstimateNoChange={setEstimateNo}
-        priceLevel={priceLevel}
-        onPriceLevelChange={setPriceLevel}
-        customerMobile={customerMobile}
-        onCustomerMobileChange={setCustomerMobile}
-        extraValue={extraValue}
-        onExtraValueChange={setExtraValue}
-        priceLevels={mockPriceLevels}
+// Mock price levels data
+const mockPriceLevels = useMemo(() => [
+  { id: 'Retail', name: 'Retail' },
+  { id: 'Wholesale', name: 'Wholesale' },
+  { id: 'Semi-Wholesale', name: 'Semi-Wholesale' },
+], []);
+
+if (isLoading) {
+  return <Loader />;
+}
+
+return (
+  <div className="space-y-6">
+    <CustomerInfo
+      customerName={customerName}
+      onCustomerNameChange={setCustomerName}
+      onAddCustomer={() => toast.info('Customer management is now handled through ledgers')}
+      taxInvoiceNo={taxInvoiceNo}
+      onTaxInvoiceNoChange={setTaxInvoiceNo}
+      estimateNo={estimateNo}
+      onEstimateNoChange={setEstimateNo}
+      priceLevel={priceLevel}
+      onPriceLevelChange={setPriceLevel}
+      customerMobile={customerMobile}
+      onCustomerMobileChange={setCustomerMobile}
+      extraValue={extraValue}
+      onExtraValueChange={setExtraValue}
+      priceLevels={mockPriceLevels}
+    />
+
+    <ItemEntryForm
+      onAddItem={addSaleItem}
+      items={items || []}
+      currentUser={currentUser}
+    />
+
+    <SaleItemsTable
+      items={currentSaleItems}
+      onRemoveItem={removeSaleItem}
+      onOpenDiscountDialog={(index) => {
+        setDiscountItemIndex(index);
+        const item = currentSaleItems[index];
+        setDialogDiscount(item.discountPercentage || item.discountValue || 0);
+        setDialogDiscountType(item.discountPercentage ? 'percentage' : 'amount');
+        setIsDiscountDialogOpen(true);
+      }}
+    />
+
+    <CompanySummary summaries={companySummaries} />
+
+    <SaleSummary
+      subtotal={subtotal}
+      totalDiscount={totalDiscount}
+      totalGst={totalGst}
+      grandTotal={grandTotal}
+      onCreateSale={handleCreateSale}
+      onPreviewBill={() => setConsolidatedPreviewOpen(true)}
+      onClearItems={clearSaleItems}
+      isDisabled={currentSaleItems.length === 0 || !customerName}
+    />
+
+    <DiscountDialog
+      isOpen={isDiscountDialogOpen}
+      onClose={() => setIsDiscountDialogOpen(false)}
+      onApply={applyItemDiscount}
+      discount={dialogDiscount}
+      onDiscountChange={setDialogDiscount}
+      discountType={dialogDiscountType}
+      onDiscountTypeChange={setDialogDiscountType}
+    />
+
+    {isPrintModalOpen && createdSale && (
+      <PrintBillModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        sale={createdSale}
+        printType={printType}
       />
-
-      <ItemEntryForm
-        onAddItem={addSaleItem}
-        items={items || []}
-        currentUser={currentUser}
-      />
-
-      <SaleItemsTable
-        items={currentSaleItems}
-        onRemoveItem={removeSaleItem}
-        onOpenDiscountDialog={(index) => {
-          setDiscountItemIndex(index);
-          const item = currentSaleItems[index];
-          setDialogDiscount(item.discountPercentage || item.discountValue || 0);
-          setDialogDiscountType(item.discountPercentage ? 'percentage' : 'amount');
-          setIsDiscountDialogOpen(true);
-        }}
-      />
-
-      <CompanySummary summaries={companySummaries} />
-
-      <SaleSummary
-        subtotal={subtotal}
-        totalDiscount={totalDiscount}
-        totalGst={totalGst}
-        grandTotal={grandTotal}
-        onCreateSale={handleCreateSale}
-        onPreviewBill={() => setConsolidatedPreviewOpen(true)}
-        onClearItems={clearSaleItems}
-        isDisabled={currentSaleItems.length === 0 || !customerName}
-      />
-
-      <DiscountDialog
-        isOpen={isDiscountDialogOpen}
-        onClose={() => setIsDiscountDialogOpen(false)}
-        onApply={applyItemDiscount}
-        discount={dialogDiscount}
-        onDiscountChange={setDialogDiscount}
-        discountType={dialogDiscountType}
-        onDiscountTypeChange={setDialogDiscountType}
-      />
-
-      {isPrintModalOpen && createdSale && (
-        <PrintBillModal
-          isOpen={isPrintModalOpen}
-          onClose={() => setIsPrintModalOpen(false)}
-          sale={createdSale}
-          printType={printType}
-        />
-      )}
-    </div>
-  );
+    )}
+  </div>
+);
 };
 
 export default EnhancedSaleForm;

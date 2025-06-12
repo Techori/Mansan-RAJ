@@ -42,6 +42,8 @@ export async function postSales(req, res) {
 
             if (!response.ok) {
                 const errorText = await response.text();
+                console.log(`${response.status} unable to create sale`)
+                
                 // If HTTP status is not OK, it's an error from the server itself (e.g., 404, 500)
                 throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
             }
