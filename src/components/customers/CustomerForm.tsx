@@ -18,10 +18,12 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
   const { currentCompany } = useCompany();
   const { addCustomer, updateCustomer } = useCustomers();
 
-  const [formData, setFormData] = useState<Omit<Customer, 'id' | 'createdAt'>>({
+  const [formData, setFormData] = useState<any>({
     companyId: currentCompany?.id || '',
     name: '',
-    phone: '',
+    groupName: '',
+    stateName: '',
+    pincode: '',
     email: '',
     gstNumber: '',
     address: '',
@@ -30,12 +32,19 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
   useEffect(() => {
     if (customer) {
       const { id, createdAt, ...rest } = customer;
-      setFormData(rest);
+      setFormData({
+        groupName: '',
+        stateName: '',
+        pincode: '',
+        ...rest
+      });
     } else {
       setFormData({
         companyId: currentCompany?.id || '',
         name: '',
-        phone: '',
+        groupName: '',
+        stateName: '',
+        pincode: '',
         email: '',
         gstNumber: '',
         address: '',
@@ -84,11 +93,11 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number *</Label>
+              <Label htmlFor="groupName">Group Name *</Label>
               <Input
-                id="phone"
-                name="phone"
-                value={formData.phone}
+                id="groupName"
+                name="groupName"
+                value={formData.groupName}
                 onChange={handleChange}
                 required
               />
@@ -97,34 +106,47 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="stateName">State Name</Label>
               <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
+                id="stateName"
+                name="stateName"
+                value={formData.stateName}
                 onChange={handleChange}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="gstNumber">GST Number</Label>
+              <Label htmlFor="pincode">Pincode</Label>
               <Input
-                id="gstNumber"
-                name="gstNumber"
-                value={formData.gstNumber}
+                id="pincode"
+                name="pincode"
+                value={formData.pincode}
                 onChange={handleChange}
               />
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="gstNumber">GST Number *</Label>
+              <Input
+                id="gstNumber"
+                name="gstNumber"
+                value={formData.gstNumber}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
+            <Label htmlFor="address">Address *</Label>
             <Textarea
               id="address"
               name="address"
               value={formData.address}
               onChange={handleChange}
               rows={3}
+              required
             />
           </div>
         </CardContent>
@@ -143,3 +165,4 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
 };
 
 export default CustomerForm;
+

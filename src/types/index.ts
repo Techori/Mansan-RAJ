@@ -18,12 +18,10 @@ export interface Godown {
 }
 
 export interface PriceLevel {
-  rate : string,
-  ending_at : string,
-  starting_at : string
-
+  rate: string;
+  ending_at: string;
+  starting_from: string;
 }
-
 
 export interface Item {
   company: string;

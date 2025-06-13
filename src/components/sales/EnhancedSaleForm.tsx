@@ -60,47 +60,18 @@ const EnhancedSaleForm: React.FC = () => {
   const [customerMobile, setCustomerMobile] = useState<string>('');
   const [extraValue, setExtraValue] = useState<string>('');
 
+  // Loader and sale status state
+  const [loading, setLoading] = useState(false);
+  const [saleStatus, setSaleStatus] = useState<null | 'success' | 'rejected'>(null);
+
+  // Form reset key
+  const [formResetKey, setFormResetKey] = useState(0);
+
   // Set loading state
   useEffect(() => {
     const hasItems = items && items.length > 0;
     setIsLoading(!hasItems);
   }, [items]);
-
-  //set taxInvoiceNo and estimateNo
-
-  useEffect(() => {
-
-
-    const fetchVouchers = async () => {
-      try {
-
-        const company1 = encodeURI("ManSan Raj Traders")
-        const company2 = encodeURI("Estimate")
-
-        const [currentTaxInvoiceNo, currentEstimateNo] = await Promise.all([
-          axios.get(`api/bill-numbers/${company1}`),
-          axios.get(`api/bill-numbers/${company2}`)
-        ]);
-
-        setTaxInvoiceNo(currentTaxInvoiceNo.data.billNumber);
-        setEstimateNo(currentEstimateNo.data.billNumber)
-
-
-      }
-
-      catch (err) {
-        console.log(`Error fetching voucher no : ${err.message}`)
-
-      }
-
-
-    }
-
-    fetchVouchers();
-
-
-
-  }, [items])
 
   // Calculate company summaries for the bill
   const companySummaries = useMemo(() => {
@@ -240,6 +211,8 @@ const EnhancedSaleForm: React.FC = () => {
 
     console.log("currentSaleItems", currentSaleItems)
 
+    setLoading(true);
+    setSaleStatus(null);
     try {
       const validation = validateCompanyItems(currentSaleItems);
       if (!validation.valid) {
@@ -267,166 +240,177 @@ const EnhancedSaleForm: React.FC = () => {
       for (const [companyName, items] of Object.entries(itemsByCompany)) {
         const hasGst = items.some(item => item.gstPercentage && item.gstPercentage > 0);
         const billType = hasGst ? 'GST' as const : 'NON-GST' as const;
-        let billNumber = '';
+        const billNumber = `${companyName.substring(0, 3).toUpperCase()}-${Date.now()}`;
 
-        try {
-          const companyKey = companyName;
-          const encodedCompany = encodeURI(companyKey);
+        const billData = {
+          companyName,
+          billNumber,
+          date: new Date().toISOString(),
+          customerName,
+          billType,
+          items,
+          totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
+          createdBy: currentUser?.name || 'Unknown',
+          taxInvoiceNo,
+          estimateNo,
+          priceLevel,
+          customerMobile,
+        };
 
-          //call to api to get bill number and update it...
+        //TO-Do add price level to the bill (Retail, Wholesale, Semi-Wholesale)
+        //TO-Do mock voucher no..
+        //TO-Do customer name
+        //TO-DO items should be shown in items array
+        //TO-Do implement selected godown
+        //TO-Do for all items, give base units
+        //TO-Do billed quantity
+        //TO-Do billed units
+        //TO-Do add drop down entries for all units
+        //TO-Do
 
-          const currentBillNumber = await axios.post(`/api/bill-numbers/${encodedCompany}/increment`)
+        const sale = createSale(billData);
+        if (sale) {
+          createdSales.push(sale);
+        }
+      }
 
-          billNumber = currentBillNumber.data.billNumber
-
-
-          const billData = {
-            companyName,
-            billNumber,
-            date: new Date().toISOString(),
-            customerName,
-            billType,
-            items,
-            totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
-            createdBy: currentUser?.name || 'Unknown',
-            taxInvoiceNo,
-            estimateNo,
-            priceLevel,
-            customerMobile,
-          };
-
-          const sale = createSale(billData);
-          if (sale) {
-            createdSales.push(sale);
+      console.log("createdSales", createdSales)
+      //call api
+      try {
+        const promises = createdSales.map(sale =>
+          axios.post('/api/tally/sales/create-sale', sale)
+        );
+        const results = await Promise.all(promises);
+        setLoading(false);
+        let allSuccess = true;
+        results.forEach(res => {
+          console.log("frontend", res.data);
+          if (res.data.createdCount !== 1) {
+            allSuccess = false;
           }
-        } catch (err) {
-          console.log(err.message)
+        });
+        if (allSuccess) {
+          setSaleStatus('success');
+          setCreatedSale(createdSales);
+          clearSaleItems();
+          setCustomerName('');
+          setTaxInvoiceNo('');
+          setEstimateNo('');
+          setPriceLevel('');
+          setCustomerMobile('');
+          setExtraValue('');
+          setIsPrintModalOpen(true);
+          toast.success('Sale created successfully');
+        } else {
+          setSaleStatus('rejected');
+          setCreatedSale(null);
+          setIsPrintModalOpen(false);
+          clearSaleItems();
+          setFormResetKey(prev => prev + 1);
+          toast.error('Sales failed');
         }
-
-        console.log("createdSales", createdSales)
-        //call api
-        try {
-          const promises = createdSales.map(sale =>
-            axios.post('/api/tally/sales/create-sale', sale)
-
-          );
-
-
-          const results = await Promise.all(promises);
-          results.forEach(res => console.log("frontend",res.data));
-
-
-        } catch (err) {
-          console.log('Error creating sales to tally', err.message)
-        }
-      // or res.status, etc.
-      
+      } catch (err) {
+        setLoading(false);
+        setSaleStatus('rejected');
+        setCreatedSale(null);
+        setIsPrintModalOpen(false);
+        console.log('Error creating sales to tally', err.message)
       }
-
-
-    
-
-      if (createdSales.length > 0) {
-        setCreatedSale(createdSales);
-        clearSaleItems();
-        setCustomerName('');
-        setTaxInvoiceNo('');
-        setEstimateNo('');
-        setPriceLevel('');
-        setCustomerMobile('');
-        setExtraValue('');
-        setIsPrintModalOpen(true);
-      }
-
-
-  
     } catch (error) {
-    console.error('Error creating sale:', error);
-    toast.error('Failed to create sale');
+      setLoading(false);
+      setSaleStatus('rejected');
+      setCreatedSale(null);
+      setIsPrintModalOpen(false);
+      console.error('Error creating sale:', error);
+      toast.error('Failed to create sale');
+    }
+  };
+
+  // Mock price levels data
+  const mockPriceLevels = useMemo(() => [
+    { id: 'Retail', name: 'Retail' },
+    { id: 'Wholesale', name: 'Wholesale' },
+    { id: 'Semi-Wholesale', name: 'Semi-Wholesale' },
+  ], []);
+
+  if (isLoading || loading) {
+    return <Loader />;
   }
-};
 
-// Mock price levels data
-const mockPriceLevels = useMemo(() => [
-  { id: 'Retail', name: 'Retail' },
-  { id: 'Wholesale', name: 'Wholesale' },
-  { id: 'Semi-Wholesale', name: 'Semi-Wholesale' },
-], []);
-
-if (isLoading) {
-  return <Loader />;
-}
-
-return (
-  <div className="space-y-6">
-    <CustomerInfo
-      customerName={customerName}
-      onCustomerNameChange={setCustomerName}
-      onAddCustomer={() => toast.info('Customer management is now handled through ledgers')}
-      taxInvoiceNo={taxInvoiceNo}
-      onTaxInvoiceNoChange={setTaxInvoiceNo}
-      estimateNo={estimateNo}
-      onEstimateNoChange={setEstimateNo}
-      priceLevel={priceLevel}
-      onPriceLevelChange={setPriceLevel}
-      customerMobile={customerMobile}
-      onCustomerMobileChange={setCustomerMobile}
-      extraValue={extraValue}
-      onExtraValueChange={setExtraValue}
-      priceLevels={mockPriceLevels}
-    />
-
-    <ItemEntryForm
-      onAddItem={addSaleItem}
-      items={items || []}
-      currentUser={currentUser}
-    />
-
-    <SaleItemsTable
-      items={currentSaleItems}
-      onRemoveItem={removeSaleItem}
-      onOpenDiscountDialog={(index) => {
-        setDiscountItemIndex(index);
-        const item = currentSaleItems[index];
-        setDialogDiscount(item.discountPercentage || item.discountValue || 0);
-        setDialogDiscountType(item.discountPercentage ? 'percentage' : 'amount');
-        setIsDiscountDialogOpen(true);
-      }}
-    />
-
-    <CompanySummary summaries={companySummaries} />
-
-    <SaleSummary
-      subtotal={subtotal}
-      totalDiscount={totalDiscount}
-      totalGst={totalGst}
-      grandTotal={grandTotal}
-      onCreateSale={handleCreateSale}
-      onPreviewBill={() => setConsolidatedPreviewOpen(true)}
-      onClearItems={clearSaleItems}
-      isDisabled={currentSaleItems.length === 0 || !customerName}
-    />
-
-    <DiscountDialog
-      isOpen={isDiscountDialogOpen}
-      onClose={() => setIsDiscountDialogOpen(false)}
-      onApply={applyItemDiscount}
-      discount={dialogDiscount}
-      onDiscountChange={setDialogDiscount}
-      discountType={dialogDiscountType}
-      onDiscountTypeChange={setDialogDiscountType}
-    />
-
-    {isPrintModalOpen && createdSale && (
-      <PrintBillModal
-        isOpen={isPrintModalOpen}
-        onClose={() => setIsPrintModalOpen(false)}
-        sale={createdSale}
-        printType={printType}
+  return (
+    <div className="space-y-6">
+      <CustomerInfo
+        customerName={customerName}
+        onCustomerNameChange={setCustomerName}
+        onAddCustomer={() => toast.info('Customer management is now handled through ledgers')}
+        taxInvoiceNo={taxInvoiceNo}
+        onTaxInvoiceNoChange={setTaxInvoiceNo}
+        estimateNo={estimateNo}
+        onEstimateNoChange={setEstimateNo}
+        priceLevel={priceLevel}
+        onPriceLevelChange={setPriceLevel}
+        customerMobile={customerMobile}
+        onCustomerMobileChange={setCustomerMobile}
+        extraValue={extraValue}
+        onExtraValueChange={setExtraValue}
+        priceLevels={mockPriceLevels}
       />
-    )}
-  </div>
-);
+
+      <ItemEntryForm
+        key={formResetKey}
+        onAddItem={addSaleItem}
+        items={items || []}
+        currentUser={currentUser}
+      />
+
+      <SaleItemsTable
+        key={formResetKey}
+        items={currentSaleItems}
+        onRemoveItem={removeSaleItem}
+        onOpenDiscountDialog={(index) => {
+          setDiscountItemIndex(index);
+          const item = currentSaleItems[index];
+          setDialogDiscount(item.discountPercentage || item.discountValue || 0);
+          setDialogDiscountType(item.discountPercentage ? 'percentage' : 'amount');
+          setIsDiscountDialogOpen(true);
+        }}
+      />
+
+      <CompanySummary summaries={companySummaries} />
+
+      <SaleSummary
+        subtotal={subtotal}
+        totalDiscount={totalDiscount}
+        totalGst={totalGst}
+        grandTotal={grandTotal}
+        onCreateSale={handleCreateSale}
+        onPreviewBill={() => setConsolidatedPreviewOpen(true)}
+        onClearItems={clearSaleItems}
+        isDisabled={currentSaleItems.length === 0 || !customerName}
+      />
+
+      <DiscountDialog
+        isOpen={isDiscountDialogOpen}
+        onClose={() => setIsDiscountDialogOpen(false)}
+        onApply={applyItemDiscount}
+        discount={dialogDiscount}
+        onDiscountChange={setDialogDiscount}
+        discountType={dialogDiscountType}
+        onDiscountTypeChange={setDialogDiscountType}
+      />
+
+      {isPrintModalOpen && createdSale && (
+        <PrintBillModal
+          isOpen={isPrintModalOpen}
+          onClose={() => setIsPrintModalOpen(false)}
+          sale={createdSale}
+          printType={printType}
+        />
+      )}
+
+      {saleStatus === 'rejected' && <div className="text-red-500 text-center font-bold">Sales Rejected</div>}
+    </div>
+  );
 };
 
 export default EnhancedSaleForm;
