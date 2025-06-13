@@ -12,6 +12,7 @@ import { Item, SaleItem, Company } from '../../types';
 import { toast } from 'sonner';
 import { calculateExclusiveCost, calculateMRP, calculateGstAmount } from '../../utils/pricingUtils';
 import { useCustomers } from '../../contexts/CustomersContext';
+import { convert } from '../../utils/unitConversion';
 
 
 // Define sales units
@@ -83,7 +84,27 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
         // Set GST rate based on company and item
         setGstRate(item.gstPercentage);
         setHsnCode(item.hsn);
-        setExclusiveCost(item.unitPrice || 0)
+        
+        // Calculate the unit price based on the standard unit
+        if (item.priceList && item.priceList.length > 0) {
+          const standardUnit = item.priceList[0].rate.split('/').pop();
+          const standardRate = parseFloat(item.priceList[0].rate.split('/')[0]);
+          
+          // Convert the rate from standard unit to the selected sales unit
+          if (standardUnit && item.allUnits) {
+            try {
+              const convertedRate = convert(standardRate, standardUnit, salesUnit, item.allUnits);
+              setExclusiveCost(convertedRate);
+            } catch (error) {
+              console.error('Error converting rate:', error);
+              setExclusiveCost(standardRate);
+            }
+          } else {
+            setExclusiveCost(standardRate);
+          }
+        } else {
+          setExclusiveCost(item.unitPrice || 0);
+        }
       } else {
         setSelectedItem(null);
         setMrp(0);
@@ -91,7 +112,71 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
         setGstAmount(0);
       }
     }
-  }, [selectedItemName, items, quantity]);
+  }, [selectedItemName, items, quantity, salesUnit]);
+
+  // Add effect to update price when sales unit changes
+  React.useEffect(() => {
+    if (selectedItem && selectedItem.priceList && selectedItem.priceList.length > 0) {
+      const standardUnit = selectedItem.priceList[0].rate.split('/').pop();
+      const standardRate = parseFloat(selectedItem.priceList[0].rate.split('/')[0]);
+      
+      if (standardUnit && selectedItem.allUnits) {
+        try {
+          const convertedRate = convert(standardRate, standardUnit, salesUnit, selectedItem.allUnits);
+          setExclusiveCost(convertedRate);
+        } catch (error) {
+          console.error('Error converting rate:', error);
+          setExclusiveCost(standardRate);
+        }
+      }
+    }
+  }, [salesUnit, selectedItem]);
+
+  // Dynamically update exclusiveCost based on quantity and price slabs
+  React.useEffect(() => {
+    if (!selectedItem || !selectedItem.priceList || selectedItem.priceList.length === 0) return;
+
+    const standardUnit = selectedItem.priceList[0].rate.split('/').pop();
+    let standardQty = quantity;
+
+    // Convert quantity to standard unit if needed
+    if (salesUnit !== standardUnit) {
+      try {
+        standardQty = convert(quantity, salesUnit, standardUnit, selectedItem.allUnits);
+      } catch (error) {
+        standardQty = quantity;
+      }
+    }
+
+    // Find the correct price slab
+    let applicableRate = 0;
+    let found = false;
+    for (const rList of selectedItem.priceList) {
+      const start = parseFloat(rList.starting_from?.split(' ')[0]) || 0;
+      const end = parseFloat(rList.ending_at?.split(' ')[0]) || Infinity;
+      if (start <= standardQty && standardQty <= end) {
+        const standardRate = parseFloat(rList.rate.split('/')[0]);
+        try {
+          applicableRate = convert(standardRate, standardUnit, salesUnit, selectedItem.allUnits);
+        } catch (error) {
+          applicableRate = standardRate;
+        }
+        found = true;
+        break;
+      }
+    }
+    // If no slab matched, use the last slab as default
+    if (!found && selectedItem.priceList.length > 0) {
+      const lastSlab = selectedItem.priceList[selectedItem.priceList.length - 1];
+      const standardRate = parseFloat(lastSlab.rate.split('/')[0]);
+      try {
+        applicableRate = convert(standardRate, standardUnit, salesUnit, selectedItem.allUnits);
+      } catch (error) {
+        applicableRate = standardRate;
+      }
+    }
+    setExclusiveCost(applicableRate);
+  }, [quantity, salesUnit, selectedItem]);
 
   // Reset form function
   const resetForm = () => {
@@ -119,7 +204,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       return;
     }
 
-    console.log("selectedItem", selectedItem)
+    console.log("selectedItem", selectedItem);
 
     let discountValue = 0;
     let discountPercentage = 0;
@@ -132,7 +217,41 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
         discountValue = (exclusiveCost * quantity * discount) / 100;
       }
     }
-    const baseAmount = exclusiveCost * quantity;
+
+    // Determine the standard unit and convert quantity if necessary
+    const standardUnit = selectedItem.priceList[0].rate.split('/').pop();
+    let standardQty = quantity;
+
+    if (salesUnit !== standardUnit) {
+      try {
+        // Convert quantity from sales unit to standard unit
+        standardQty = convert(quantity, salesUnit, standardUnit, selectedItem.allUnits);
+      } catch (error) {
+        console.error('Error converting quantity:', error);
+        standardQty = quantity;
+      }
+    }
+
+    // Calculate applicable rate based on price level list
+    let applicableRate = exclusiveCost; // Use the already converted exclusive cost
+    for (const rList of selectedItem.priceList) {
+      const start = parseInt(rList.starting_from?.split(' ')[0]) || 0;
+      const end = parseInt(rList.ending_at?.split(' ')[0]) || Infinity;
+
+      if (start <= standardQty && standardQty <= end) {
+        const standardRate = parseFloat(rList.rate.split('/')[0]);
+        try {
+          // Convert the rate from standard unit to sales unit
+          applicableRate = convert(standardRate, standardUnit, salesUnit, selectedItem.allUnits);
+          break;
+        } catch (error) {
+          console.error('Error converting rate:', error);
+          applicableRate = standardRate;
+        }
+      }
+    }
+
+    const baseAmount = applicableRate * quantity;
     const discountedBaseAmount = baseAmount - discountValue;
     let itemGstAmount = 0;
     if (gstRate > 0) {
@@ -144,7 +263,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       companyName: selectedItem.company,
       name: selectedItem.name,
       quantity,
-      unitPrice: exclusiveCost,
+      unitPrice: applicableRate,
       mrp: selectedItem.mrp,
       salesUnit,
       gstPercentage: gstRate > 0 ? gstRate : undefined,
@@ -155,13 +274,13 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       totalAmount: totalPrice,
       hsnCode: selectedItem.hsn || '',
       packagingDetails: packagingDetails || '',
-      godown: selectedGodown, // Just pass the godown name directly
+      godown: selectedGodown,
       priceLevelList: selectedItem.priceList || [],
       createdBy: currentUser?.name || '',
       allUnits: selectedItem.allUnits || 'pcs'
     };
 
-    console.log("saleItem", saleItem)
+    console.log("saleItem", saleItem);
 
     try {
       onAddItem(saleItem);
@@ -501,4 +620,4 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   );
 };
 
-export default ItemEntryForm; 
+export default ItemEntryForm;

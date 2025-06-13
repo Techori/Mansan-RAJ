@@ -1,6 +1,6 @@
 {
     "host" : "localhost",
     "port" : 9000,
-    "connectionURL" : "https://a721-2401-4900-1c09-6119-5c35-4646-d865-760a.ngrok-free.app",
+    "connectionURL" : "https://bba1-2401-4900-1c09-6119-5c35-4646-d865-760a.ngrok-free.app",
     "timeout" : 10000
 }
