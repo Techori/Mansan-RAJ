@@ -10,9 +10,11 @@ interface GroupedLedgers {
 
 interface CustomersContextType {
   groupedCustomers: GroupedLedgers[];
+  addCustomer: (customer: Omit<Customer, 'createdAt'>) => Promise<Customer>;
   selectedGroup: string;
   setSelectedGroup: (group: string) => void;
   filteredLedgers: string[];
+  isLoading: boolean;
 }
 
 const CustomersContext = createContext<CustomersContextType | undefined>(undefined);
@@ -67,13 +69,35 @@ export const CustomersProvider: React.FC<{ children: ReactNode }> = ({ children 
     return group ? group.ledgers : [];
   }, [selectedGroup, groupedCustomers]);
 
+  const addCustomer = async (customer: Omit<Customer, 'createdAt'>) => {
+    try {
+      console.log("customer in customer context", customer);
+      
+      const customerData = {
+        ...customer,
+        createdAt: new Date().toISOString()
+      };
+
+      const response = await axios.post('/api/tally/ledgers/create-ledger', customerData);
+      await fetchCustomers(); // Refresh the list after adding
+      toast.success('Customer added successfully');
+      return response.data;
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to add customer';
+      toast.error(errorMessage);
+      throw err;
+    }
+  };
+
   return (
     <CustomersContext.Provider
       value={{
         groupedCustomers,
+        addCustomer,
         selectedGroup,
         setSelectedGroup,
-        filteredLedgers
+        filteredLedgers,
+        isLoading
       }}
     >
       {children}

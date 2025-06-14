@@ -63,11 +63,15 @@ export interface SaleItem {
 // Customer Type
 export interface Customer {
   name: string;
-  phone: string;
-  email: string;
-  gstNumber?: string;
+  phone?: string;
+  email?: string;
+  gstNumber: string;
   address: string;
   createdAt: string;
+  companyId?: string;
+  groupName: string;
+  stateName?: string;
+  pincode?: string;
 }
 
 // Sale Type

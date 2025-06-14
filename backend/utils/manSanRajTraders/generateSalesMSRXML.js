@@ -6,6 +6,8 @@ export function generateSalesMSRXML(companyName, priceLevel, voucherNumber, part
   // const date = new Date().toISOString().slice(0, 10).split('-').join('')
   const date = '20250602';
 
+  
+
   const salesLedgerNameXML = (gst_rate) => {
     if (gst_rate === 0) {
       return `<LEDGERNAME>SALES@EXEMPTED</LEDGERNAME>`

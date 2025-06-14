@@ -4,15 +4,16 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, AlertCircle } from 'lucide-react';
+import { Plus, AlertCircle, UserPlus } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CheckIcon, ChevronDown } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { Item, SaleItem, Company } from '../../types';
+import { Item, SaleItem, Company, Customer } from '../../types';
 import { toast } from 'sonner';
 import { calculateExclusiveCost, calculateMRP, calculateGstAmount } from '../../utils/pricingUtils';
 import { useCustomers } from '../../contexts/CustomersContext';
 import { convert } from '../../utils/unitConversion';
+import CreateCustomerDialog from './CreateCustomerDialog';
 
 
 // Define sales units
@@ -21,8 +22,8 @@ const SALES_UNITS = ['bag','bora','box','bun','case','dibbi','Dz','gm','hamger',
 interface ItemEntryFormProps {
   onAddItem: (saleItem: SaleItem) => void;
   items: Item[];
-  companies?: Company[];  // Make companies prop optional
-  currentUser?: { name: string }; // Add this line
+  companies?: Company[];
+  currentUser?: { name: string };
 }
 
 const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
@@ -32,7 +33,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   currentUser,
 }) => {
   const { groupedCustomers } = useCustomers();
-  const [company,setCompany] = useState<string>('');
+  const [company, setCompany] = useState<string>('');
   const [selectedItemName, setSelectedItemName] = useState<string>('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [selectedGodown, setSelectedGodown] = useState<string>('');
@@ -48,6 +49,23 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   const [discount, setDiscount] = useState<number>(0);
   const [discountType, setDiscountType] = useState<'amount' | 'percentage'>('amount');
   const [packagingDetails, setPackagingDetails] = useState<string>('');
+  const [isCreateCustomerOpen, setIsCreateCustomerOpen] = useState(false);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [isCustomerPopoverOpen, setIsCustomerPopoverOpen] = useState(false);
+  const [isQuantityInvalid, setIsQuantityInvalid] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (quantity && selectedItem && selectedGodown) {
+      const godown = selectedItem.godown?.find(g => g.name === selectedGodown);
+      if (godown && quantity > godown.quantity) {
+        setIsQuantityInvalid(true);
+      } else {
+        setIsQuantityInvalid(false);
+      }
+    } else {
+      setIsQuantityInvalid(false);
+    }
+  }, [quantity, selectedItem, selectedGodown]);
 
   // Filter items based on search
   const filteredSearchItems = useMemo(() => {
@@ -201,6 +219,12 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
     }
     if (!selectedGodown) {
       toast.error('Please select a godown');
+      return;
+    }
+
+    const godown = selectedItem.godown?.find(g => g.name === selectedGodown);
+    if (godown && quantity > godown.quantity) {
+      toast.error(`Quantity exceeds available stock in ${selectedGodown} (${godown.quantity})`);
       return;
     }
 
@@ -420,8 +444,14 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               onChange={(e) => {
                 const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
                 setQuantity(value);
+                if (selectedItem && selectedGodown) {
+                  const godown = selectedItem.godown?.find(g => g.name === selectedGodown);
+                  if (godown && value > godown.quantity) {
+                    toast.error(`Exceeds available stock of ${godown.quantity}`);
+                  }
+                }
               }}
-              className="h-8 text-xs"
+              className={cn("h-8 text-xs", isQuantityInvalid && "border-red-500 focus-visible:ring-red-500")}
             />
           </div>
           

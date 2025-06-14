@@ -1,18 +1,33 @@
 import React, { useState } from 'react';
 import { useCustomers } from '../../contexts/CustomersContext';
 import { Search } from 'lucide-react';
+import Loader from '../ui/loader';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const CustomersList: React.FC = () => {
-  const { groupedCustomers, selectedGroup, setSelectedGroup, filteredLedgers } = useCustomers();
+  const { groupedCustomers, selectedGroup, setSelectedGroup, filteredLedgers, isLoading } = useCustomers();
   const [search, setSearch] = useState('');
+
+  console.log("CustomersList - groupedCustomers:", groupedCustomers);
+  console.log("CustomersList - selectedGroup:", selectedGroup);
+  console.log("CustomersList - filteredLedgers:", filteredLedgers);
 
   // Filter ledgers based on search
   const filteredResults = filteredLedgers.filter((ledger) => 
     ledger.toLowerCase().includes(search.toLowerCase())
   );
+
+  console.log("CustomersList - filteredResults:", filteredResults);
+
+  if (isLoading) {
+    return (
+      <Card className="p-6">
+        <Loader />
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">

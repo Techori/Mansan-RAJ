@@ -9,6 +9,7 @@ export async function getLedgers(req,res){
     const tallyURL = config.connectionURL
 
     const ledgerXml1 = fetchCustomerXML('ManSan Raj Traders')
+
     const ledgerXml2 = fetchCustomerXML('Estimate')
 
     //making http request to tallyServer
@@ -36,12 +37,14 @@ export async function getLedgers(req,res){
 
 
     const ledgerText1 = await ledgerResponse1.text();
+   
     const ledgerText2 = await ledgerResponse2.text();
-
+    
 
     const ledgerJSON1 = parseCustomersXML(ledgerText1)
+    console.log("ledgerJSON1 in getLedgers", ledgerJSON1);
     const ledgerJSON2 = parseCustomersXML(ledgerText2)
-
+    console.log("ledgerJSON2 in getLedgers", ledgerJSON2);
     const finalLedgerJSON = [...ledgerJSON1, ...ledgerJSON2]
     res.json(finalLedgerJSON)
 

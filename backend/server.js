@@ -13,6 +13,7 @@ const app = express();
 //cross-origin
 app.use(cors())
 dotenv.config()
+app.use(express.urlencoded({extended:true}))
 
 //json parsing
 app.use(express.json())
@@ -41,7 +42,7 @@ if(connectionStatus)
     //create sales
     app.use('/api/tally/sales', salesTallyRoutes)
     // Bill number management
-    
+    app.use('/api/tally/ledgers', customerTallyRoutes)
 
     //NOW CALL TALLY-RELATED APISN HERE...
 }

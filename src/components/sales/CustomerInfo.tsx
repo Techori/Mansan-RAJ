@@ -4,10 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useCustomers } from '../../contexts/CustomersContext';
-import { useCompany } from '../../contexts/CompanyContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckIcon, ChevronDown, Plus, Phone } from 'lucide-react';
+import { CheckIcon, ChevronDown, Plus, Phone, UserPlus } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { Customer } from '../../types';
+import CreateCustomerDialog from './CreateCustomerDialog';
 
 // Add interface for phone mapping
 interface PhoneMapping {
@@ -18,7 +19,7 @@ interface PhoneMapping {
 interface CustomerInfoProps {
   customerName: string;
   onCustomerNameChange: (name: string) => void;
-  onAddCustomer: (customer: any) => void;
+  onAddCustomer: (customer: Customer) => void;
   taxInvoiceNo?: string;
   onTaxInvoiceNoChange?: (value: string) => void;
   estimateNo?: string;
@@ -51,6 +52,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
   priceLevels = [],
 }) => {
   const [isCustomerPopoverOpen, setIsCustomerPopoverOpen] = useState(false);
+  const [isCreateCustomerOpen, setIsCreateCustomerOpen] = useState(false);
   const [inputValue, setInputValue] = useState(customerName);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const { groupedCustomers } = useCustomers();
@@ -148,6 +150,13 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
     setInputValue(customerName);
   }, [customerName]);
 
+  const handleCustomerCreated = (customer: Customer) => {
+    onAddCustomer(customer);
+    onCustomerNameChange(customer.name);
+    setInputValue(customer.name);
+    setIsCreateCustomerOpen(false);
+  };
+
   return (
     <Card className="p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mb-4">
@@ -173,7 +182,19 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
         {/* Customer Selection */}
         <div className="space-y-2">
-          <Label htmlFor="customerName">Customer Name *</Label>
+          <Label htmlFor="customerName" className="flex justify-between items-center">
+            <span>Customer Name *</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2"
+              onClick={() => setIsCreateCustomerOpen(true)}
+            >
+              <UserPlus size={14} className="mr-1" />
+              New
+            </Button>
+          </Label>
           <div className="relative">
             <Input
               id="customerName"
@@ -193,9 +214,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
               <ChevronDown className="h-4 w-4 opacity-50" />
             </Button>
             {isCustomerPopoverOpen && filteredLedgers.length > 0 && (
-              <div
-                className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200"
-              >
+              <div className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200">
                 <div className="max-h-[300px] overflow-auto py-1">
                   {filteredLedgers.map((ledger, index) => (
                     <button
@@ -220,6 +239,22 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
                     </button>
                   ))}
                 </div>
+                {filteredLedgers.length === 0 && (
+                  <div className="p-2 text-sm text-gray-500 text-center">
+                    No customers found.
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="px-0 text-sm"
+                      onClick={() => {
+                        setIsCustomerPopoverOpen(false);
+                        setIsCreateCustomerOpen(true);
+                      }}
+                    >
+                      Create new customer
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -286,6 +321,13 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Create Customer Dialog */}
+      <CreateCustomerDialog
+        isOpen={isCreateCustomerOpen}
+        onClose={() => setIsCreateCustomerOpen(false)}
+        onSuccess={handleCustomerCreated}
+      />
     </Card>
   );
 };

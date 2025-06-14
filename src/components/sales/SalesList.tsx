@@ -143,8 +143,7 @@ const SalesList: React.FC = () => {
         <PrintBillModal
           isOpen={isPrintModalOpen}
           onClose={handleClosePrintModal}
-          sale={selectedSale}
-          printType="all"
+          sale={[selectedSale]}
         />
       )}
     </div>

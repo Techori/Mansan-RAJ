@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -16,9 +18,10 @@ interface CustomerFormProps {
 
 const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCancel }) => {
   const { currentCompany } = useCompany();
-  const { addCustomer, updateCustomer } = useCustomers();
+  const { addCustomer, groupedCustomers } = useCustomers();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState<any>({
+  const [formData, setFormData] = useState<Omit<Customer, 'createdAt'>>({
     companyId: currentCompany?.id || '',
     name: '',
     groupName: '',
@@ -31,7 +34,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
 
   useEffect(() => {
     if (customer) {
-      const { id, createdAt, ...rest } = customer;
+      const { createdAt, ...rest } = customer;
       setFormData({
         groupName: '',
         stateName: '',
@@ -60,14 +63,31 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (customer) {
-      updateCustomer({ ...customer, ...formData });
-    } else {
-      addCustomer({ ...formData, companyId: formData.companyId || '' });
+    setIsSubmitting(true);
+
+    try {
+      if (customer) {
+        // Handle update logic here if needed
+        const updatedCustomer: Customer = {
+          ...customer,
+          ...formData,
+          createdAt: customer.createdAt
+        };
+        onSubmit(updatedCustomer);
+      } else {
+        // Create new customer
+        console.log("customer in customer form", formData);
+        const createdCustomer = await addCustomer(formData);
+        onSubmit(createdCustomer);
+      }
+    } catch (error) {
+      console.error('Error submitting customer:', error);
+      toast.error('Failed to submit customer');
+    } finally {
+      setIsSubmitting(false);
     }
-    onSubmit({ ...formData, id: customer?.id || '', createdAt: customer?.createdAt || new Date().toISOString() });
   };
 
   return (
@@ -94,13 +114,22 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
             </div>
             <div className="space-y-2">
               <Label htmlFor="groupName">Group Name *</Label>
-              <Input
-                id="groupName"
+              <Select
                 name="groupName"
                 value={formData.groupName}
-                onChange={handleChange}
-                required
-              />
+                onValueChange={(value) => setFormData(prev => ({ ...prev, groupName: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a group" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...new Set(groupedCustomers.map(g => g.group))].map((groupName) => (
+                    <SelectItem key={groupName} value={groupName}>
+                      {groupName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -152,11 +181,11 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
         </CardContent>
 
         <CardFooter className="flex justify-between">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit">
-            {customer ? 'Update Customer' : 'Add Customer'}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Submitting...' : customer ? 'Update Customer' : 'Add Customer'}
           </Button>
         </CardFooter>
       </form>

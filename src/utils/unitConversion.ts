@@ -1,4 +1,4 @@
-function parseUnitHierarchy(hierarchyStr: string) {
+export function parseUnitHierarchy(hierarchyStr: string) {
   const tokens = hierarchyStr.split(' of ').map(s => s.trim());
   const relations = [];
 

@@ -1,7 +1,11 @@
 import React from 'react';
 import styled from 'styled-components';
 
-const Loader = () => {
+interface LoaderProps {
+  message?: string;
+}
+
+const Loader: React.FC<LoaderProps> = ({ message }) => {
   return (
     <StyledWrapper>
       <div className="dot-spinner">
@@ -14,7 +18,7 @@ const Loader = () => {
         <div className="dot-spinner__dot" />
         <div className="dot-spinner__dot" />
       </div>
-      <p className="loading-text">Loading...</p>
+      {message && <p className="loading-text">{message}</p>}
     </StyledWrapper>
   );
 };

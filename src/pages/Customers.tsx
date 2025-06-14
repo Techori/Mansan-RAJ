@@ -56,7 +56,16 @@ const Customers = () => {
           <CustomerForm customer={editingCustomer} onSubmit={handleSubmit} onCancel={handleCancel} />
         )}
 
-        <CustomersList onEdit={handleEditCustomer} />
+        {!isAddingCustomer && !editingCustomer && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer List</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CustomersList />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </MainLayout>
   );

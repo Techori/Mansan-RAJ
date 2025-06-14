@@ -26,7 +26,7 @@ interface CompanySummary {
 }
 
 const EnhancedSaleForm: React.FC = () => {
-  const { items } = useInventory();
+  const { items, fetchItems } = useInventory();
   const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems, validateCompanyItems, updateSaleItem: contextUpdateSaleItem } = useSales();
   const { groupedCustomers } = useCustomers();
   const { currentUser } = useAuth();
@@ -44,7 +44,7 @@ const EnhancedSaleForm: React.FC = () => {
   // Bill modal state
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [printType, setPrintType] = useState<'single' | 'all' | 'consolidated'>('all');
-  const [createdSale, setCreatedSale] = useState<any>(null);
+  const [createdSale, setCreatedSale] = useState<any[]>([]);
   const [consolidatedPreviewOpen, setConsolidatedPreviewOpen] = useState(false);
 
   // Summary calculations
@@ -62,6 +62,7 @@ const EnhancedSaleForm: React.FC = () => {
 
   // Loader and sale status state
   const [loading, setLoading] = useState(false);
+  const [isInventoryRefreshed, setIsInventoryRefreshed] = useState(false);
   const [saleStatus, setSaleStatus] = useState<null | 'success' | 'rejected'>(null);
 
   // Form reset key
@@ -72,6 +73,14 @@ const EnhancedSaleForm: React.FC = () => {
     const hasItems = items && items.length > 0;
     setIsLoading(!hasItems);
   }, [items]);
+
+  useEffect(() => {
+    if (isInventoryRefreshed) {
+      toast.success('Inventory updated successfully');
+      setLoading(false);
+      setIsInventoryRefreshed(false);
+    }
+  }, [items, isInventoryRefreshed]);
 
   // Calculate company summaries for the bill
   const companySummaries = useMemo(() => {
@@ -209,14 +218,13 @@ const EnhancedSaleForm: React.FC = () => {
       return;
     }
 
-    console.log("currentSaleItems", currentSaleItems)
-
     setLoading(true);
     setSaleStatus(null);
     try {
       const validation = validateCompanyItems(currentSaleItems);
       if (!validation.valid) {
         toast.error(validation.errorMessage || 'Invalid items');
+        setLoading(false);
         return;
       }
 
@@ -250,23 +258,12 @@ const EnhancedSaleForm: React.FC = () => {
           billType,
           items,
           totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
-          createdBy: currentUser?.name || 'Unknown',
+          createdBy: items[0]?.createdBy || 'Unknown',
           taxInvoiceNo,
           estimateNo,
           priceLevel,
           customerMobile,
         };
-
-        //TO-Do add price level to the bill (Retail, Wholesale, Semi-Wholesale)
-        //TO-Do mock voucher no..
-        //TO-Do customer name
-        //TO-DO items should be shown in items array
-        //TO-Do implement selected godown
-        //TO-Do for all items, give base units
-        //TO-Do billed quantity
-        //TO-Do billed units
-        //TO-Do add drop down entries for all units
-        //TO-Do
 
         const sale = createSale(billData);
         if (sale) {
@@ -274,55 +271,55 @@ const EnhancedSaleForm: React.FC = () => {
         }
       }
 
-      console.log("createdSales", createdSales)
-      //call api
-      try {
-        const promises = createdSales.map(sale =>
-          axios.post('/api/tally/sales/create-sale', sale)
-        );
-        const results = await Promise.all(promises);
-        setLoading(false);
-        let allSuccess = true;
-        results.forEach(res => {
-          console.log("frontend", res.data);
-          if (res.data.createdCount !== 1) {
-            allSuccess = false;
-          }
-        });
-        if (allSuccess) {
-          setSaleStatus('success');
-          setCreatedSale(createdSales);
-          clearSaleItems();
-          setCustomerName('');
-          setTaxInvoiceNo('');
-          setEstimateNo('');
-          setPriceLevel('');
-          setCustomerMobile('');
-          setExtraValue('');
-          setIsPrintModalOpen(true);
-          toast.success('Sale created successfully');
-        } else {
-          setSaleStatus('rejected');
-          setCreatedSale(null);
-          setIsPrintModalOpen(false);
-          clearSaleItems();
-          setFormResetKey(prev => prev + 1);
-          toast.error('Sales failed');
+      // Create all sales in parallel and wait for all responses
+      const createSalePromises = createdSales.map(async (sale) => {
+        try {
+          const response = await axios.post('/api/tally/sales/create-sale', sale);
+          return { success: response.data.createdCount === 1, sale, error: null };
+        } catch (error) {
+          console.error(`Failed to create sale for ${sale.companyName}:`, error);
+          return { success: false, sale, error: error.message };
         }
-      } catch (err) {
-        setLoading(false);
+      });
+
+      // Wait for all API calls to complete
+      const results = await Promise.all(createSalePromises);
+      console.log("API Results:", results);
+
+      // Check if all sales were successful
+      const failedSales = results.filter(result => !result.success);
+      
+      if (failedSales.length === 0) {
+        // All sales were successful
+        setSaleStatus('success');
+        setCreatedSale(createdSales);
+        
+        // Clear form after successful creation
+        clearSaleItems();
+        setCustomerName('');
+        setTaxInvoiceNo('');
+        setEstimateNo('');
+        setPriceLevel('');
+        setCustomerMobile('');
+        setExtraValue('');
+        
+        // Show success message and open print modal
+        toast.success('All sales created successfully');
+        setIsPrintModalOpen(true);
+      } else {
+        // Some sales failed
         setSaleStatus('rejected');
-        setCreatedSale(null);
-        setIsPrintModalOpen(false);
-        console.log('Error creating sales to tally', err.message)
+        setCreatedSale([]);
+        const failedCompanies = failedSales.map(result => result.sale.companyName).join(', ');
+        toast.error(`Failed to create sales for: ${failedCompanies}`);
       }
     } catch (error) {
-      setLoading(false);
       setSaleStatus('rejected');
-      setCreatedSale(null);
-      setIsPrintModalOpen(false);
-      console.error('Error creating sale:', error);
-      toast.error('Failed to create sale');
+      setCreatedSale([]);
+      console.error('Error creating sales:', error);
+      toast.error('Failed to create sales');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -333,8 +330,12 @@ const EnhancedSaleForm: React.FC = () => {
     { id: 'Semi-Wholesale', name: 'Semi-Wholesale' },
   ], []);
 
-  if (isLoading || loading) {
-    return <Loader />;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader message="Syncing Sales to Tally..." />
+      </div>
+    );
   }
 
   return (
@@ -386,7 +387,7 @@ const EnhancedSaleForm: React.FC = () => {
         onCreateSale={handleCreateSale}
         onPreviewBill={() => setConsolidatedPreviewOpen(true)}
         onClearItems={clearSaleItems}
-        isDisabled={currentSaleItems.length === 0 || !customerName}
+        isDisabled={currentSaleItems.length === 0 || !customerName || loading}
       />
 
       <DiscountDialog
@@ -399,16 +400,29 @@ const EnhancedSaleForm: React.FC = () => {
         onDiscountTypeChange={setDialogDiscountType}
       />
 
-      {isPrintModalOpen && createdSale && (
+      {isPrintModalOpen && createdSale.length > 0 && (
         <PrintBillModal
           isOpen={isPrintModalOpen}
-          onClose={() => setIsPrintModalOpen(false)}
+          onClose={async () => {
+            setIsPrintModalOpen(false);
+            setFormResetKey(prev => prev + 1);
+            try {
+              await fetchItems(true);
+              setIsInventoryRefreshed(true);
+            } catch (error) {
+              toast.error('Failed to update inventory');
+              setLoading(false);
+            }
+          }}
           sale={createdSale}
-          printType={printType}
         />
       )}
 
-      {saleStatus === 'rejected' && <div className="text-red-500 text-center font-bold">Sales Rejected</div>}
+      {saleStatus === 'rejected' && (
+        <div className="text-red-500 text-center font-bold">
+          Sales Rejected
+        </div>
+      )}
     </div>
   );
 };
