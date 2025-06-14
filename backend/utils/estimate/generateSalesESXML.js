@@ -4,8 +4,8 @@ export default function generateSalesESXML(companyName, priceLevel, voucherNumbe
   console.log("In ESXML", items);
 
   let totalBillAmount = 0;
-  // const date = new Date().toISOString().slice(0, 10).split('-').join('')
-  const date = '20250602';
+  const date = new Date().toISOString().slice(0, 10).split('-').join('')
+  // const date = '20250602';
 
   // Inventory Lines
   const itemLinesXML = items.map(item => {

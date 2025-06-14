@@ -3,8 +3,8 @@ import { tallyRoundOff } from '../createSalesFunctions.js';
 export function generateSalesMSRXML(companyName, priceLevel, voucherNumber, partyLedger, items, narration, tax_info, enteredBy) {
 
   let totalBillAmount = 0;
-  // const date = new Date().toISOString().slice(0, 10).split('-').join('')
-  const date = '20250602';
+  const date = new Date().toISOString().slice(0, 10).split('-').join('')
+  // const date = '20250602';
 
   
 
