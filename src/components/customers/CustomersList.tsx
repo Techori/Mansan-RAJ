@@ -38,7 +38,7 @@ const CustomersList: React.FC = () => {
             <SelectTrigger>
               <SelectValue placeholder="Select a group" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[400px] overflow-y-auto">
               {groupedCustomers.map((group) => (
                 <SelectItem key={group.group} value={group.group}>
                   {group.group}
@@ -74,8 +74,8 @@ const CustomersList: React.FC = () => {
               </tr>
             </thead>
             <tbody className="text-center">
-              {filteredResults.map((ledger, index) => (
-                <tr key={index} className="bg-white border-b hover:bg-gray-50">
+              {filteredResults.map((ledger) => (
+                <tr key={ledger} className="bg-white border-b hover:bg-gray-50">
                   <td className="px-4 py-3 text-center font-medium">{ledger}</td>
                   <td className="px-4 py-3 text-center">{selectedGroup}</td>
                 </tr>

@@ -39,11 +39,16 @@ export const CustomersProvider: React.FC<{ children: ReactNode }> = ({ children 
         throw new Error('No data received from server');
       }
 
-      // Transform the response data into GroupedLedgers format
-      const transformedData = Object.entries(response.data).map(([_, value]: [string, any]) => ({
-        group: value.group,
-        ledgers: value.ledgers || []
+      console.log("response.data in customers context", response.data);
+
+      // Transform the response data (which is an object) into GroupedLedgers format
+      const transformedData = Object.entries(response.data).map(([groupName, ledgers]) => ({
+        group: groupName,
+        ledgers: Array.isArray(ledgers) ? ledgers : [],
       }));
+      
+      console.log("transformedData in customers context", transformedData);
+     
 
       setGroupedCustomers(transformedData);
       

@@ -114,6 +114,7 @@ async function parseStockItemGodown(xmlString, companyName) {
   console.log("Finished parseStockItemGodown. Processed products count:", products.length);
   // return JSON.stringify(products, null, 2); 
   // // Return the array of products as a JSON string
+
   return products;
 }
 

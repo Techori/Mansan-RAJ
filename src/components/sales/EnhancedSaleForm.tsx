@@ -191,6 +191,7 @@ const EnhancedSaleForm: React.FC = () => {
     let newTotalDiscount = 0;
     let newTotalGst = 0;
     let newGrandTotal = 0;
+    console.log("currentSaleItems in summary calculations", currentSaleItems);
 
     currentSaleItems.forEach(item => {
       const baseAmount = item.unitPrice * item.quantity;
@@ -362,6 +363,7 @@ const EnhancedSaleForm: React.FC = () => {
         onAddItem={addSaleItem}
         items={items || []}
         currentUser={currentUser}
+        billerName={extraValue}
       />
 
       <SaleItemsTable

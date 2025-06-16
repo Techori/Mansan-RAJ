@@ -4,29 +4,29 @@ export function parseCustomersXML(xmlData){
 
 const parser = new DOMParser();
 const xmlDoc = parser.parseFromString(xmlData, "text/xml");
-const envelopeChildren = xmlDoc.documentElement.childNodes;
 
-const result = [];
-let currentGroup = null;
+const ledgerNodes = xmlDoc.getElementsByTagName("LEDGER");
+const groupedLedgers = {};
 
-for (let i = 0; i < envelopeChildren.length; i++) {
-    const node = envelopeChildren[i];
-    
-    if (node.nodeType === 1) { // ELEMENT_NODE
-        const value = node.textContent.trim();
+for (let i = 0; i < ledgerNodes.length; i++) {
+  const ledger = ledgerNodes[i];
+  const nameNode = ledger.getElementsByTagName("NAME")[0];
+  const parentNode = ledger.getElementsByTagName("PARENT")[0];
 
-        if (node.tagName === 'GROUPNAME') {
-            currentGroup = {
-                group: value,
-                ledgers: []
-            };
-            result.push(currentGroup);
-        } else if (node.tagName === 'LEDGERNAME' && currentGroup) {
-            currentGroup.ledgers.push(value);
-        }
+  if (nameNode && parentNode) {
+    const name = nameNode.textContent.trim();
+    const parent = parentNode.textContent.trim();
+
+    if (!groupedLedgers[parent]) {
+      groupedLedgers[parent] = [];
     }
+    groupedLedgers[parent].push(name);
+  }
 }
 
-return result;
+// console.log(JSON.stringify(groupedLedgers, null, 2));
+return groupedLedgers;
+
+
 
 }

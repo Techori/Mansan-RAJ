@@ -211,32 +211,38 @@ export async function parseStockItemPriceList(xmlString, companyName) {
         resultDict["stock_quantity"] = getElementText(stockitemFullBlock, "CLOSINGBALANCE");
         resultDict["base_units"] = getElementText(stockitemFullBlock, "BASEUNITS");
 
-        const { block: hsndetailsBlock } = getElementBlock(stockitemFullBlock, "HSNDETAILS.LIST");
-        if (hsndetailsBlock) {
-            resultDict["hsn_code"] = getElementText(hsndetailsBlock, "HSNCODE");
-        } else {
-            resultDict["hsn_code"] = "";
-        }
+        // const { block: hsndetailsBlock } = getElementBlock(stockitemFullBlock, "GSTETAILS.LIST");
+        // if (hsndetailsBlock) {
+        //     resultDict["hsn_code"] = getElementText(hsndetailsBlock, "HSNCODE");
+        // } else {
+        //     resultDict["hsn_code"] = "";
+        // }
 
         const gstData = {};
         const { block: gstdetailsListBlock } = getElementBlock(stockitemFullBlock, "GSTDETAILS.LIST");
         if (gstdetailsListBlock) {
+            resultDict["hsn_code"] = getElementText(gstdetailsListBlock, "HSNCODE");
             const { block: statewisedetailsBlock } = getElementBlock(gstdetailsListBlock, "STATEWISEDETAILS.LIST");
             if (statewisedetailsBlock) {
                 const ratedetailBlocks = findAllElementBlocks(statewisedetailsBlock, "RATEDETAILS.LIST");
                 for (const block of ratedetailBlocks) {
                     const dutyHead = getElementText(block, "GSTRATEDUTYHEAD");
                     const rate = getElementText(block, "GSTRATE");
-                    if (dutyHead === "CGST") {
+                    if (dutyHead === "Central Tax") {
                         gstData["cgst_rate"] = rate;
-                    } else if (dutyHead === "SGST/UTGST") {
+                    } else if (dutyHead === "State Tax") {
                         gstData["sgst_utgst_rate"] = rate;
-                    } else if (dutyHead === "IGST") {
+                    } else if (dutyHead === "Integrated Tax") {
                         gstData["igst_rate"] = rate;
                     }
                 }
             }
         }
+
+        else{
+            resultDict["hsn_code"] = "";
+        }
+
         resultDict["gst_details"] = gstData;
 
         const priceLevels = [];
@@ -295,6 +301,7 @@ export async function parseStockItemPriceList(xmlString, companyName) {
 
         resultDict["company_name"] = companyName;
         allStockItemObjects.push(resultDict);
+       
     }
     return allStockItemObjects;
 }

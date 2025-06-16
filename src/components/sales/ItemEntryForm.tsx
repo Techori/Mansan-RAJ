@@ -24,6 +24,7 @@ interface ItemEntryFormProps {
   items: Item[];
   companies?: Company[];
   currentUser?: { name: string };
+  billerName?: string;
 }
 
 const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
@@ -31,6 +32,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   items,
   companies,
   currentUser,
+  billerName,
 }) => {
   const { groupedCustomers } = useCustomers();
   const [company, setCompany] = useState<string>('');
@@ -57,7 +59,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   React.useEffect(() => {
     if (quantity && selectedItem && selectedGodown) {
       const godown = selectedItem.godown?.find(g => g.name === selectedGodown);
-      if (godown && quantity > godown.quantity) {
+      if (godown && quantity > parseInt(godown.quantity)) {
         setIsQuantityInvalid(true);
       } else {
         setIsQuantityInvalid(false);
@@ -223,7 +225,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
     }
 
     const godown = selectedItem.godown?.find(g => g.name === selectedGodown);
-    if (godown && quantity > godown.quantity) {
+    if (godown && quantity > parseInt(godown.quantity)) {
       toast.error(`Quantity exceeds available stock in ${selectedGodown} (${godown.quantity})`);
       return;
     }
@@ -300,7 +302,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       packagingDetails: packagingDetails || '',
       godown: selectedGodown,
       priceLevelList: selectedItem.priceList || [],
-      createdBy: currentUser?.name || '',
+      createdBy: billerName || currentUser?.name || '',
       allUnits: selectedItem.allUnits || 'pcs'
     };
 
@@ -446,7 +448,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
                 setQuantity(value);
                 if (selectedItem && selectedGodown) {
                   const godown = selectedItem.godown?.find(g => g.name === selectedGodown);
-                  if (godown && value > godown.quantity) {
+                  if (godown && value > parseInt(godown.quantity)) {
                     toast.error(`Exceeds available stock of ${godown.quantity}`);
                   }
                 }

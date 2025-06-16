@@ -18,6 +18,7 @@ async function fetchCompanyData(companyName) {
     fetchStockItemPriceListXML({ companyName }),
   ];
 
+
   const [godownRes, priceListRes] = await Promise.all([
     fetch(tallyURL, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: godownXML }),
     fetch(tallyURL, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: priceListXML }),
@@ -27,6 +28,8 @@ async function fetchCompanyData(companyName) {
     godownRes.text(),
     priceListRes.text(),
   ]);
+
+  
 
   const [godownJSON, priceListJSON] = await Promise.all([
     parseStockItemGodown(godownText, companyName),
